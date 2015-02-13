@@ -4,29 +4,35 @@
 
 #include <Windows.h>
 #include <d3d11.h>
-#include <d3dx11.h>
 #include <D3Dcompiler.h>
-#include <xnamath.h>
+#include <DirectXMath.h>
+#include <stdio.h>
 
-
-using namespace System;
 
 
 namespace SGEFramework {
 
-	public ref class Game
-	{
+    class Game{
 	public:
+		__declspec( dllexport ) Game();
+		__declspec( dllexport ) ~Game();
+
+		__declspec( dllexport ) void Run(HINSTANCE hInstance, int nCmdShow);
 
 	private:
+		HINSTANCE	hInst;
+		HWND		mainWnd;
 
+
+		HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow);
+		HRESULT InitDevice();
 
 	protected:
-		void Run();
 		void Initalize();
 		void Draw();
 		void Update();
 		void LoadContent();
+
 
 	};
 }
