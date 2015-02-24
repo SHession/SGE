@@ -7,6 +7,7 @@
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
+#include <wincodec.h>
 #include <stdio.h>
 
 
@@ -35,14 +36,6 @@ namespace SGEFramework {
 			DirectX::XMMATRIX gWorldViewProj;
 		};
 
-		//.obj mesh strucure
-		struct ObjMesh{
-			SimpleVertex *vertices;
-			WORD *indices;
-			UINT numOfVertices;
-			UINT numOfIndices;
-		};
-
 
 		HINSTANCE	hInst;
 		HWND		mainWnd;
@@ -60,16 +53,49 @@ namespace SGEFramework {
 		ID3D11Buffer*           g_pConstantBuffer;
 		ID3D11Texture2D*		g_pDepthStencil;
 		ID3D11DepthStencilView*	g_pDepthStencilView;
+		ID3D11ShaderResourceView           *g_pTextureResourceView;
+
+		ID3D11SamplerState*                 g_pSamplerLinear;
+
+		IWICImagingFactory* g_pFactory;
+		IWICBitmapDecoder* g_pDecoder;
+
+		DirectX::XMMATRIX                g_World;
+		DirectX::XMMATRIX                g_View;
+		DirectX::XMMATRIX                g_Projection;
+
+		int	numOfIndices;
+		int numOfVertices;
 
 		HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow);
 		HRESULT InitDevice();
 
+		
+
 	protected:
-		void Initalize();
-		void Draw();
-	    void Update();
-		void LoadContent();
-		void CleanUp();
+		//.obj mesh strucure
+		struct ObjMesh{
+			SimpleVertex *vertices;
+			WORD *indices;
+			UINT numOfVertices;
+			UINT numOfIndices;
+		};
+
+
+
+		__declspec( dllexport ) virtual void Initalize();
+		__declspec( dllexport ) virtual void Draw();
+	    __declspec( dllexport ) virtual void Update();
+		__declspec( dllexport ) virtual void LoadContent();
+		__declspec( dllexport ) virtual void CleanUp();
+
+
+		__declspec( dllexport ) virtual void DrawMesh(ObjMesh*mesh) final;
+		__declspec( dllexport ) virtual void Clear() final;
+		__declspec( dllexport ) virtual HRESULT CreateVertexAndIndexBuffer(ObjMesh *mesh) final;
+
+		__declspec( dllexport ) virtual HRESULT LoadObj(char* filename, ObjMesh* mesh) final;
+		__declspec( dllexport ) virtual HRESULT LoadTexture(wchar_t* filename) final;
 
 
 	};
