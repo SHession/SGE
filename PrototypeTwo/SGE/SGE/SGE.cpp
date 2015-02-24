@@ -3,12 +3,22 @@
 #include "stdafx.h"
 #include "SGE.h"
 
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+
+#include <dxgiformat.h>
+#include <assert.h>
+#include <memory>
 
 using namespace SGEFramework;
 
 //Forward Declerations
 HRESULT CompileShader( _In_ LPCWSTR srcFile, _In_ LPCSTR entryPoint, _In_ LPCSTR profile, _Outptr_ ID3DBlob** blob );
 LRESULT CALLBACK WndProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam );
+size_t _WICBitsPerPixel( REFGUID targetGuid , IWICImagingFactory *factory);
+DXGI_FORMAT _WICToDXGI( const GUID& guid );
 
 
 Game::Game(){
@@ -21,6 +31,9 @@ Game::~Game(){
 void Game::Run(HINSTANCE hInstance, int nCmdShow){
 	InitWindow(hInstance, nCmdShow);
 	InitDevice();
+
+	Initalize();
+	LoadContent();
 
 	MSG msg = {0};
     while( WM_QUIT != msg.message )
@@ -198,6 +211,55 @@ HRESULT Game::InitDevice(){
 	hr = g_pd3dDevice->CreatePixelShader( pPSBlob->GetBufferPointer(), pPSBlob->GetBufferSize(), NULL, &g_pPixelShader);
 	if(FAILED(hr)) return hr;
 
+	//Create constant buffer(s)
+	D3D11_BUFFER_DESC bd;
+	SecureZeroMemory(&bd, sizeof(bd));
+	bd.ByteWidth = sizeof(CB_VS_PER_OBJECT);
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = 0;
+
+	hr = g_pd3dDevice->CreateBuffer(&bd, NULL, &g_pConstantBuffer);
+	if(FAILED(hr)) return hr;
+
+	 // Create the sample state
+    D3D11_SAMPLER_DESC sampDesc;
+    ZeroMemory( &sampDesc, sizeof(sampDesc) );
+    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sampDesc.MinLOD = 0;
+    sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    hr = g_pd3dDevice->CreateSamplerState( &sampDesc, &g_pSamplerLinear );
+    if( FAILED( hr ) )
+        return hr;
+
+
+	g_pImmediateContext->VSSetShader( g_pVertexShader, NULL, 0 );
+	g_pImmediateContext->PSSetShader( g_pPixelShader, NULL, 0 );
+
+	using namespace DirectX;
+
+
+	//Handle ship matrices
+	g_World =   XMMatrixIdentity();
+
+
+	    // Initialize the view matrix
+	XMVECTOR Eye = XMVectorSet( 0, 3, -10, 0.0f );
+	XMVECTOR At = XMVectorSet( 0.0f, 0.0f, 0.0f, 0.0f );
+	XMVECTOR Up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+	g_View = XMMatrixLookAtLH( Eye, At, Up );
+
+    // Initialize the projection matrix
+	g_Projection = XMMatrixPerspectiveFovLH( XM_PIDIV2, width / (FLOAT)height, 0.01f, 100.0f );
+
+		//Update constant buffer
+	CB_VS_PER_OBJECT cb;
+	cb.gWorldViewProj = XMMatrixTranspose(g_World * g_View * g_Projection);
+	g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
 
 	return S_OK;
 }
@@ -208,8 +270,16 @@ void Game::Initalize(){
 }
 
 void Game::Draw(){
-	float ClearColor[4] = { 0.1f, 0.1f, 0.5f, 1.0f }; //red,green,blue,alpha
-    g_pImmediateContext->ClearRenderTargetView( g_pRenderTargetView, ClearColor );
+
+	CB_VS_PER_OBJECT cb;
+	cb.gWorldViewProj = XMMatrixTranspose(g_World * g_View * g_Projection);
+	g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
+	g_pImmediateContext->VSSetConstantBuffers( 0, 1, &g_pConstantBuffer );
+
+	g_pImmediateContext->VSSetShader( g_pVertexShader, NULL, 0 );
+	g_pImmediateContext->PSSetShader( g_pPixelShader, NULL, 0 );
+	
+
 	g_pSwapChain->Present( 0, 0 );
 }
 
@@ -219,7 +289,6 @@ void Game::Update(){
 
 
 void Game::LoadContent(){
-
 
 }
 
@@ -236,7 +305,354 @@ void Game::CleanUp(){
 	if(g_pDepthStencil) g_pDepthStencil->Release();
 	if(g_pDepthStencilView) g_pDepthStencilView->Release();
 
+	if(g_pTextureResourceView) g_pTextureResourceView->Release();
+	if(g_pSamplerLinear) g_pSamplerLinear->Release();
 
+	if(g_pFactory) g_pFactory->Release();
+	if(g_pDecoder) g_pDecoder->Release();
+
+
+}
+
+void Game::DrawMesh(ObjMesh*mesh){
+
+	g_pImmediateContext->DrawIndexed(mesh->numOfIndices,0,0);
+}
+
+void Game::Clear(){
+	float ClearColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f }; //red,green,blue,alpha
+    g_pImmediateContext->ClearRenderTargetView( g_pRenderTargetView, ClearColor );
+	g_pImmediateContext->ClearDepthStencilView( g_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
+}
+
+HRESULT Game::CreateVertexAndIndexBuffer(ObjMesh *mesh){
+
+	HRESULT hr;
+
+	//Create a vertex buffer
+	D3D11_BUFFER_DESC bd;
+	SecureZeroMemory(&bd, sizeof(bd));
+	bd.ByteWidth = sizeof(SimpleVertex) * (mesh->numOfVertices);
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+
+
+	D3D11_SUBRESOURCE_DATA InitData;
+	ZeroMemory(&InitData, sizeof(InitData));
+	InitData.pSysMem = mesh->vertices;
+	hr =  g_pd3dDevice->CreateBuffer(&bd, &InitData, &g_pVertexBuffer);
+	if(FAILED(hr)) return hr;
+
+	//Set vertex buffer
+	UINT stride = sizeof(SimpleVertex);
+	UINT offset = 0;
+	g_pImmediateContext->IASetVertexBuffers(0,1, &g_pVertexBuffer, &stride, &offset);
+
+
+	//Create an index buffer
+	SecureZeroMemory(&bd, sizeof(bd));
+	bd.ByteWidth = sizeof(WORD) * mesh->numOfIndices;
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+
+	InitData.pSysMem = mesh->indices;
+    hr = g_pd3dDevice->CreateBuffer( &bd, &InitData, &g_pIndexBuffer );
+	if(FAILED(hr)) return hr;
+
+	// Set index buffer
+    g_pImmediateContext->IASetIndexBuffer( g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0 );
+
+	// Set primitive topology
+	g_pImmediateContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	return S_OK;
+}
+
+HRESULT Game::LoadObj(char* filename, ObjMesh* mesh){
+	using namespace std;
+	using namespace DirectX;
+
+	ifstream fileStream;
+	string line;
+
+	mesh->numOfIndices =0;
+	mesh->numOfVertices =0;
+
+	UINT numOfSubests = 0;
+
+	//Vectors to store the found data
+	vector<XMFLOAT3> vertices;
+	vector<XMFLOAT2> uvs;
+	vector<XMFLOAT3> normals;
+	vector<XMFLOAT4> faces;
+
+	//UINTs to store the size of the vectors
+	UINT numOfVertices = 0;
+	UINT numOfUVs = 0;
+	UINT numOfNormals = 0;
+	UINT numOfFaces = 0;
+
+	//Vector of created vertices
+	UINT numOfUVertices = 0;
+	vector<SimpleVertex> uniqueVertices;
+	//Vector of indices
+	UINT numOfIndices = 0;
+	vector<WORD> indices;
+
+	//Open the file
+	fileStream.open(filename);
+
+	if(fileStream.is_open()){
+		while(getline(fileStream, line)){
+
+			//If a group is found
+			if(line.compare(0,2,"g ") == 0){
+				numOfSubests++;
+				//if(numOfSubests >1)
+				//	fileStream.close();
+			}
+			//If a vertex is found
+			else if(line.compare(0,2,"v " ) == 0){
+
+				//find all spaces
+				size_t spaces[3];
+				spaces[0]  = line.find(" ");
+				spaces[1] = line.find(" ", spaces[0] + 2);
+				spaces[2] = line.find(" ", spaces[1] + 2);
+
+				//break up in to substrings using .substr
+				string floats[3];
+				floats[0] = line.substr(spaces[0], spaces[1] - spaces[0]);
+				floats[1] = line.substr(spaces[1], spaces[2]  - spaces[1]);
+				floats[2] = line.substr(spaces[2]);
+
+				//Store the x,y,z coordinates of the vertex 
+				XMFLOAT3 tempVertex = XMFLOAT3( stof(floats[0]),  stof(floats[1]), stof(floats[2]));
+				vertices.push_back(tempVertex);
+				numOfVertices ++;
+
+			}
+			//If a Texture UV is found
+			else if(line.compare(0,2,"vt") == 0){
+
+				//find all spaces
+				size_t spaces[2];
+				spaces[0]  = line.find(" ");
+				spaces[1] = line.find(" ", spaces[0] + 2);
+
+				//Break into substrings
+				string floats[2];
+				floats[0] = line.substr(spaces[0] , spaces[1] - spaces[0]);
+				floats[1] = line.substr(spaces[1]);
+
+				//Store the u,v coordinates
+				XMFLOAT2 tempFloat2 = XMFLOAT2(stof(floats[0]),  stof(floats[1]));
+				uvs.push_back(tempFloat2);
+				numOfUVs++;
+
+			}
+			//If a normal is found
+			else if(line.compare(0,2,"vn") == 0){
+				//find all spaces
+				size_t spaces[3];
+				spaces[0]  = line.find(" ");
+				spaces[1] = line.find(" ", spaces[0] + 2);
+				spaces[2] = line.find(" ", spaces[1] + 2);
+
+				//break up in to substrings usesing .substr
+				string floats[3];
+				floats[0] = line.substr(spaces[0], spaces[1] - spaces[0]);
+				floats[1] = line.substr(spaces[1], spaces[2]  - spaces[1]);
+				floats[2] = line.substr(spaces[2]);
+
+				//Store the x,y,z of the normal
+				XMFLOAT3 tempNormal = XMFLOAT3( stof(floats[0]),  stof(floats[1]), stof(floats[2]));
+				normals.push_back(tempNormal);			
+				numOfNormals++;
+
+			}
+			//If a row of faces is found
+			else if(line.compare(0,2,"f ") == 0){
+				//find all spaces
+				size_t spaces[3];
+				spaces[0]  = line.find(" ");
+				spaces[1] = line.find(" ", spaces[0] + 2);
+				spaces[2] = line.find(" ", spaces[1] + 2);
+
+				//break up in to substrings usesing .substr
+				string floats[3];
+				floats[0] = line.substr(spaces[0] , spaces[1] - spaces[0]);
+				floats[1] = line.substr(spaces[1] , spaces[2]  - spaces[1]);
+				floats[2] = line.substr(spaces[2]);
+
+				//For each element of the face definition (Assumes Tris)
+				for(int i =0; i < 3; i++){
+						//Find slashes 
+						size_t slashes[2];
+						slashes[0] = floats[i].find("/");
+						slashes[1] = floats[i].find("/", slashes[0] + 1);
+
+						XMFLOAT4 tempFace;
+
+						//Check for file format (Supported V, V/VT, V/VT/VN)
+						if(slashes[0] == string::npos)
+						{
+							 tempFace = XMFLOAT4 (stof(floats[i]), -1,-1, -1);
+						}
+						else if(slashes[1] == string::npos)
+						{
+							 tempFace = XMFLOAT4 (stof(floats[i].substr(0,slashes[0]))- 1, stof(floats[i].substr(slashes[0] + 1))-1,-1,-1);
+						}
+						else
+						{
+							 tempFace = XMFLOAT4 (stof(floats[i].substr(0,slashes[0]))- 1, stof(floats[i].substr(slashes[0] + 1, (slashes[1] - slashes[0]) - 1)) - 1, stof(floats[i].substr(slashes[1] + 1)) - 1, -1);
+						}
+
+						bool found = false;
+						int temp = 0;
+
+						//Check to see if the face if there is a vertex with that definition
+						for(int i =0; i < numOfFaces; i++){
+							if(faces[i].x == tempFace.x && faces[i].y == tempFace.y && faces[i].z == tempFace.z){
+								//If found store its W value
+								found = true;
+								temp = faces[i].w;	
+							}
+
+						}
+
+						//Push the face to the stored faces
+						faces.push_back(tempFace);
+						numOfFaces++;
+						
+						//If found push the index of where it was found 
+						if(found){
+							indices.push_back(temp);
+							faces[numOfFaces - 1].w = temp; //Store the index of where it was found in the .w 
+							numOfIndices++;
+
+						}
+						//If not found create a new unique vertex 
+						else if (!found){
+							SimpleVertex tempVertex;
+							tempVertex.Pos = vertices[faces[numOfFaces - 1].x];
+
+							if(faces[numOfFaces-1].y != -1){
+								tempVertex.TexUV = //uvs[faces[numOfFaces - 1].y];
+								XMFLOAT2( uvs[faces[numOfFaces - 1].y].x , 1 - uvs[faces[numOfFaces - 1].y].y);
+							}
+
+							if(faces[numOfFaces-1].z != -1){
+								tempVertex.Normal = normals[faces[numOfFaces - 1].z];
+							}
+
+							uniqueVertices.push_back(tempVertex);
+							numOfUVertices++;
+
+							//Push the index of the new vertex and associate it with the face
+							indices.push_back(numOfUVertices -1);
+							faces[numOfFaces-1].w = numOfUVertices -1;		
+							numOfIndices++;
+						}
+					}
+				}
+			}		
+		}
+
+
+	mesh->numOfVertices = numOfUVertices;
+	mesh->numOfIndices = numOfFaces;
+
+	//Create an array to store the vertices and indices
+	mesh->vertices = new SimpleVertex[mesh->numOfVertices];
+	mesh->indices = new WORD[mesh->numOfIndices];
+
+
+	//Copy the values into the mesh
+	for(int i= 0; i < numOfUVertices; i++){
+		mesh->vertices[i] = uniqueVertices[i];
+	}
+
+	for(int i= 0; i < numOfFaces; i++){
+		mesh->indices[i]= faces[i].w;
+	}
+
+	//Close the file and return
+	fileStream.close();
+
+	return S_OK;
+}
+
+HRESULT Game::LoadTexture(wchar_t* filename){
+	CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (LPVOID*)&g_pFactory);
+
+	g_pFactory->CreateDecoderFromFilename(filename, 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &g_pDecoder);
+
+	IWICBitmapFrameDecode* frame;
+	g_pDecoder->GetFrame(0, &frame);
+
+	WICPixelFormatGUID pixelFormat;
+	frame->GetPixelFormat(&pixelFormat);
+
+	DXGI_FORMAT format = _WICToDXGI( pixelFormat);
+
+	WICPixelFormatGUID convertGUID;
+    memcpy( &convertGUID, &pixelFormat, sizeof(WICPixelFormatGUID) );
+
+	UINT width, height;
+
+	frame->GetSize(&width, &height);
+
+	size_t bpp = 0;
+	bpp = _WICBitsPerPixel( pixelFormat, g_pFactory);
+
+	// Allocate temporary memory for image
+    size_t rowPitch = ( width * bpp + 7 ) / 8;
+    size_t imageSize = rowPitch * height;
+
+	std::unique_ptr<uint8_t[]> temp( new uint8_t[ imageSize ] );
+
+	frame->CopyPixels( 0, static_cast<UINT>( rowPitch ), static_cast<UINT>( imageSize ), temp.get() );  
+
+
+
+	// Create texture
+    D3D11_TEXTURE2D_DESC desc;
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+	desc.Format = format;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA initData;
+    initData.pSysMem = temp.get();
+    initData.SysMemPitch = static_cast<UINT>( rowPitch );
+    initData.SysMemSlicePitch = static_cast<UINT>( imageSize );
+
+    ID3D11Texture2D* tex = nullptr;
+    g_pd3dDevice->CreateTexture2D( &desc, &initData, &tex );
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc;
+   memset( &SRVDesc, 0, sizeof( SRVDesc ) );
+   SRVDesc.Format = format;
+   SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+   SRVDesc.Texture2D.MipLevels = 1;
+
+   g_pd3dDevice->CreateShaderResourceView( tex, &SRVDesc, &g_pTextureResourceView );
+
+   g_pImmediateContext->PSSetShaderResources( 0, 1, &g_pTextureResourceView );
+
+	if(frame) frame->Release();
+
+	return S_OK;
 }
 
 //Load a shader from a file
@@ -303,4 +719,73 @@ LRESULT CALLBACK WndProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam 
     }
 
     return 0;
+}
+
+
+size_t _WICBitsPerPixel( REFGUID targetGuid , IWICImagingFactory *factory)
+{
+
+    IWICComponentInfo *cinfo;
+    IWICPixelFormatInfo *pfinfo;
+	factory->CreateComponentInfo( targetGuid, &cinfo );
+
+    cinfo->QueryInterface( __uuidof(IWICPixelFormatInfo), reinterpret_cast<void**>( &pfinfo )  ) ;
+
+    UINT bpp;
+	pfinfo->GetBitsPerPixel( &bpp ) ;
+
+
+    return bpp;
+}
+
+ struct WICTranslate
+{
+    GUID                wic;
+    DXGI_FORMAT         format;
+};
+
+WICTranslate g_WICFormats[] = 
+{
+    { GUID_WICPixelFormat128bppRGBAFloat,       DXGI_FORMAT_R32G32B32A32_FLOAT },
+
+    { GUID_WICPixelFormat64bppRGBAHalf,         DXGI_FORMAT_R16G16B16A16_FLOAT },
+    { GUID_WICPixelFormat64bppRGBA,             DXGI_FORMAT_R16G16B16A16_UNORM },
+
+    { GUID_WICPixelFormat32bppRGBA,             DXGI_FORMAT_R8G8B8A8_UNORM },
+    { GUID_WICPixelFormat32bppBGRA,             DXGI_FORMAT_B8G8R8A8_UNORM }, // DXGI 1.1
+    { GUID_WICPixelFormat32bppBGR,              DXGI_FORMAT_B8G8R8X8_UNORM }, // DXGI 1.1
+
+    { GUID_WICPixelFormat32bppRGBA1010102XR,    DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM }, // DXGI 1.1
+    { GUID_WICPixelFormat32bppRGBA1010102,      DXGI_FORMAT_R10G10B10A2_UNORM },
+    { GUID_WICPixelFormat32bppRGBE,             DXGI_FORMAT_R9G9B9E5_SHAREDEXP },
+
+#ifdef DXGI_1_2_FORMATS
+
+    { GUID_WICPixelFormat16bppBGRA5551,         DXGI_FORMAT_B5G5R5A1_UNORM },
+    { GUID_WICPixelFormat16bppBGR565,           DXGI_FORMAT_B5G6R5_UNORM },
+
+#endif // DXGI_1_2_FORMATS
+
+    { GUID_WICPixelFormat32bppGrayFloat,        DXGI_FORMAT_R32_FLOAT },
+    { GUID_WICPixelFormat16bppGrayHalf,         DXGI_FORMAT_R16_FLOAT },
+    { GUID_WICPixelFormat16bppGray,             DXGI_FORMAT_R16_UNORM },
+    { GUID_WICPixelFormat8bppGray,              DXGI_FORMAT_R8_UNORM },
+
+    { GUID_WICPixelFormat8bppAlpha,             DXGI_FORMAT_A8_UNORM },
+
+#if (_WIN32_WINNT >= 0x0602 /*_WIN32_WINNT_WIN8*/)
+    { GUID_WICPixelFormat96bppRGBFloat,         DXGI_FORMAT_R32G32B32_FLOAT },
+#endif
+};
+
+
+DXGI_FORMAT _WICToDXGI( const GUID& guid )
+{
+    for( size_t i=0; i < _countof(g_WICFormats); ++i )
+    {
+        if ( memcmp( &g_WICFormats[i].wic, &guid, sizeof(GUID) ) == 0 )
+            return g_WICFormats[i].format;
+    }
+
+    return DXGI_FORMAT_UNKNOWN;
 }
