@@ -53,7 +53,7 @@ namespace SGEFramework {
 		ID3D11Buffer*           g_pConstantBuffer;
 		ID3D11Texture2D*		g_pDepthStencil;
 		ID3D11DepthStencilView*	g_pDepthStencilView;
-		ID3D11ShaderResourceView           *g_pTextureResourceView;
+		
 
 		ID3D11SamplerState*                 g_pSamplerLinear;
 
@@ -79,8 +79,9 @@ namespace SGEFramework {
 			WORD *indices;
 			UINT numOfVertices;
 			UINT numOfIndices;
+			ID3D11ShaderResourceView* textureResourceView;
 		};
-
+		__declspec( dllexport ) virtual void DestroyObjMesh(ObjMesh *mesh) final;
 
 
 		__declspec( dllexport ) virtual void Initalize();
@@ -95,7 +96,7 @@ namespace SGEFramework {
 		__declspec( dllexport ) virtual HRESULT CreateVertexAndIndexBuffer(ObjMesh *mesh) final;
 
 		__declspec( dllexport ) virtual HRESULT LoadObj(char* filename, ObjMesh* mesh) final;
-		__declspec( dllexport ) virtual HRESULT LoadTexture(wchar_t* filename) final;
+		__declspec( dllexport ) virtual HRESULT LoadTexture(wchar_t* filename, ObjMesh* mesh) final;
 
 
 	};

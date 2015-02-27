@@ -305,7 +305,6 @@ void Game::CleanUp(){
 	if(g_pDepthStencil) g_pDepthStencil->Release();
 	if(g_pDepthStencilView) g_pDepthStencilView->Release();
 
-	if(g_pTextureResourceView) g_pTextureResourceView->Release();
 	if(g_pSamplerLinear) g_pSamplerLinear->Release();
 
 	if(g_pFactory) g_pFactory->Release();
@@ -315,8 +314,10 @@ void Game::CleanUp(){
 }
 
 void Game::DrawMesh(ObjMesh*mesh){
-
-	g_pImmediateContext->DrawIndexed(mesh->numOfIndices,0,0);
+	if(mesh){
+		g_pImmediateContext->PSSetShaderResources( 0, 1, &mesh->textureResourceView );
+		g_pImmediateContext->DrawIndexed(mesh->numOfIndices,0,0);
+	}
 }
 
 void Game::Clear(){
@@ -401,6 +402,18 @@ HRESULT Game::LoadObj(char* filename, ObjMesh* mesh){
 	UINT numOfIndices = 0;
 	vector<WORD> indices;
 
+	//Temp variables
+	XMFLOAT2 tempFloat2;
+	XMFLOAT3 tempFloat3;
+	XMFLOAT4 tempFloat4;
+	size_t spaces[3];
+	string floats[3];
+	size_t slashes[2];
+	int position;
+	bool found;
+	SimpleVertex tempVertex;
+	int times;
+
 	//Open the file
 	fileStream.open(filename);
 
@@ -417,20 +430,18 @@ HRESULT Game::LoadObj(char* filename, ObjMesh* mesh){
 			else if(line.compare(0,2,"v " ) == 0){
 
 				//find all spaces
-				size_t spaces[3];
 				spaces[0]  = line.find(" ");
 				spaces[1] = line.find(" ", spaces[0] + 2);
 				spaces[2] = line.find(" ", spaces[1] + 2);
 
 				//break up in to substrings using .substr
-				string floats[3];
 				floats[0] = line.substr(spaces[0], spaces[1] - spaces[0]);
 				floats[1] = line.substr(spaces[1], spaces[2]  - spaces[1]);
 				floats[2] = line.substr(spaces[2]);
 
 				//Store the x,y,z coordinates of the vertex 
-				XMFLOAT3 tempVertex = XMFLOAT3( stof(floats[0]),  stof(floats[1]), stof(floats[2]));
-				vertices.push_back(tempVertex);
+				tempFloat3 = XMFLOAT3( stof(floats[0]),  stof(floats[1]), stof(floats[2]));
+				vertices.push_back(tempFloat3);
 				numOfVertices ++;
 
 			}
@@ -438,17 +449,15 @@ HRESULT Game::LoadObj(char* filename, ObjMesh* mesh){
 			else if(line.compare(0,2,"vt") == 0){
 
 				//find all spaces
-				size_t spaces[2];
 				spaces[0]  = line.find(" ");
 				spaces[1] = line.find(" ", spaces[0] + 2);
 
 				//Break into substrings
-				string floats[2];
 				floats[0] = line.substr(spaces[0] , spaces[1] - spaces[0]);
 				floats[1] = line.substr(spaces[1]);
 
 				//Store the u,v coordinates
-				XMFLOAT2 tempFloat2 = XMFLOAT2(stof(floats[0]),  stof(floats[1]));
+				tempFloat2 = XMFLOAT2(stof(floats[0]),  stof(floats[1]));
 				uvs.push_back(tempFloat2);
 				numOfUVs++;
 
@@ -456,87 +465,100 @@ HRESULT Game::LoadObj(char* filename, ObjMesh* mesh){
 			//If a normal is found
 			else if(line.compare(0,2,"vn") == 0){
 				//find all spaces
-				size_t spaces[3];
 				spaces[0]  = line.find(" ");
 				spaces[1] = line.find(" ", spaces[0] + 2);
 				spaces[2] = line.find(" ", spaces[1] + 2);
 
 				//break up in to substrings usesing .substr
-				string floats[3];
 				floats[0] = line.substr(spaces[0], spaces[1] - spaces[0]);
 				floats[1] = line.substr(spaces[1], spaces[2]  - spaces[1]);
 				floats[2] = line.substr(spaces[2]);
 
 				//Store the x,y,z of the normal
-				XMFLOAT3 tempNormal = XMFLOAT3( stof(floats[0]),  stof(floats[1]), stof(floats[2]));
-				normals.push_back(tempNormal);			
+				tempFloat3 = XMFLOAT3( stof(floats[0]),  stof(floats[1]), stof(floats[2]));
+				normals.push_back(tempFloat3);			
 				numOfNormals++;
 
 			}
 			//If a row of faces is found
 			else if(line.compare(0,2,"f ") == 0){
 				//find all spaces
-				size_t spaces[3];
+				size_t spaces[4];
 				spaces[0]  = line.find(" ");
 				spaces[1] = line.find(" ", spaces[0] + 2);
 				spaces[2] = line.find(" ", spaces[1] + 2);
+				spaces[3] = line.find(" ", spaces[2] + 2);
 
+				times = 3;
 				//break up in to substrings usesing .substr
-				string floats[3];
+				string floats[4];
 				floats[0] = line.substr(spaces[0] , spaces[1] - spaces[0]);
 				floats[1] = line.substr(spaces[1] , spaces[2]  - spaces[1]);
 				floats[2] = line.substr(spaces[2]);
 
+				//If there are four vertices
+				if(spaces[3] != string::npos){	
+					times = 4;	
+					floats[2] = line.substr(spaces[2], spaces[3]  - spaces[2]);
+					floats[3] = line.substr(spaces[3]);
+				}
+
 				//For each element of the face definition (Assumes Tris)
-				for(int i =0; i < 3; i++){
+				for(int i =0; i < times; i++){
 						//Find slashes 
-						size_t slashes[2];
 						slashes[0] = floats[i].find("/");
 						slashes[1] = floats[i].find("/", slashes[0] + 1);
-
-						XMFLOAT4 tempFace;
 
 						//Check for file format (Supported V, V/VT, V/VT/VN)
 						if(slashes[0] == string::npos)
 						{
-							 tempFace = XMFLOAT4 (stof(floats[i]), -1,-1, -1);
+							tempFloat4 = XMFLOAT4 (stof(floats[i]), -1,-1, -1);
 						}
 						else if(slashes[1] == string::npos)
 						{
-							 tempFace = XMFLOAT4 (stof(floats[i].substr(0,slashes[0]))- 1, stof(floats[i].substr(slashes[0] + 1))-1,-1,-1);
+							 tempFloat4 = XMFLOAT4 (stof(floats[i].substr(0,slashes[0]))- 1, stof(floats[i].substr(slashes[0] + 1))-1,-1,-1);
 						}
 						else
 						{
-							 tempFace = XMFLOAT4 (stof(floats[i].substr(0,slashes[0]))- 1, stof(floats[i].substr(slashes[0] + 1, (slashes[1] - slashes[0]) - 1)) - 1, stof(floats[i].substr(slashes[1] + 1)) - 1, -1);
+							 tempFloat4 = XMFLOAT4 (stof(floats[i].substr(0,slashes[0]))- 1, stof(floats[i].substr(slashes[0] + 1, (slashes[1] - slashes[0]) - 1)) - 1, stof(floats[i].substr(slashes[1] + 1)) - 1, -1);
 						}
 
-						bool found = false;
-						int temp = 0;
+						found = false;
+						position = 0;
 
 						//Check to see if the face if there is a vertex with that definition
 						for(int i =0; i < numOfFaces; i++){
-							if(faces[i].x == tempFace.x && faces[i].y == tempFace.y && faces[i].z == tempFace.z){
+							if(faces[i].x == tempFloat4.x && faces[i].y == tempFloat4.y && faces[i].z == tempFloat4.z){
 								//If found store its W value
 								found = true;
-								temp = faces[i].w;	
+								position = faces[i].w;	
 							}
 
 						}
 
 						//Push the face to the stored faces
-						faces.push_back(tempFace);
+						faces.push_back(tempFloat4);
 						numOfFaces++;
 						
 						//If found push the index of where it was found 
 						if(found){
-							indices.push_back(temp);
-							faces[numOfFaces - 1].w = temp; //Store the index of where it was found in the .w 
-							numOfIndices++;
-
+							if( i< 3){
+								indices.push_back(position);
+								numOfIndices++;
+							}
+							else{
+								indices.push_back(indices[numOfIndices - 3]);
+								numOfIndices++;
+								indices.push_back(indices[numOfIndices - 2]);
+								numOfIndices++;
+								indices.push_back(position);
+								numOfIndices++;
+							}
+							
+							faces[numOfFaces - 1].w = position; //Store the index of where it was found in the .w 
 						}
 						//If not found create a new unique vertex 
 						else if (!found){
-							SimpleVertex tempVertex;
 							tempVertex.Pos = vertices[faces[numOfFaces - 1].x];
 
 							if(faces[numOfFaces-1].y != -1){
@@ -552,18 +574,32 @@ HRESULT Game::LoadObj(char* filename, ObjMesh* mesh){
 							numOfUVertices++;
 
 							//Push the index of the new vertex and associate it with the face
-							indices.push_back(numOfUVertices -1);
-							faces[numOfFaces-1].w = numOfUVertices -1;		
-							numOfIndices++;
+							if( i< 3){
+								indices.push_back(numOfUVertices -1);	
+								numOfIndices++;
+							}
+							else{
+								indices.push_back(indices[numOfIndices - 3]);
+								numOfIndices++;
+								indices.push_back(indices[numOfIndices - 2]);
+								numOfIndices++;
+								indices.push_back(numOfUVertices -1);	
+								numOfIndices++;
+							}
+
+							faces[numOfFaces-1].w = numOfUVertices -1;	
 						}
 					}
 				}
 			}		
 		}
+		else{
+			return E_FAIL;
+		}
 
 
 	mesh->numOfVertices = numOfUVertices;
-	mesh->numOfIndices = numOfFaces;
+	mesh->numOfIndices = numOfIndices;
 
 	//Create an array to store the vertices and indices
 	mesh->vertices = new SimpleVertex[mesh->numOfVertices];
@@ -575,8 +611,8 @@ HRESULT Game::LoadObj(char* filename, ObjMesh* mesh){
 		mesh->vertices[i] = uniqueVertices[i];
 	}
 
-	for(int i= 0; i < numOfFaces; i++){
-		mesh->indices[i]= faces[i].w;
+	for(int i= 0; i < numOfIndices; i++){
+		mesh->indices[i]= indices[i];
 	}
 
 	//Close the file and return
@@ -585,7 +621,7 @@ HRESULT Game::LoadObj(char* filename, ObjMesh* mesh){
 	return S_OK;
 }
 
-HRESULT Game::LoadTexture(wchar_t* filename){
+HRESULT Game::LoadTexture(wchar_t* filename, ObjMesh* mesh){
 	CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (LPVOID*)&g_pFactory);
 
 	g_pFactory->CreateDecoderFromFilename(filename, 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &g_pDecoder);
@@ -646,9 +682,7 @@ HRESULT Game::LoadTexture(wchar_t* filename){
    SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
    SRVDesc.Texture2D.MipLevels = 1;
 
-   g_pd3dDevice->CreateShaderResourceView( tex, &SRVDesc, &g_pTextureResourceView );
-
-   g_pImmediateContext->PSSetShaderResources( 0, 1, &g_pTextureResourceView );
+   g_pd3dDevice->CreateShaderResourceView( tex, &SRVDesc, &mesh->textureResourceView );
 
 	if(frame) frame->Release();
 
@@ -788,4 +822,11 @@ DXGI_FORMAT _WICToDXGI( const GUID& guid )
     }
 
     return DXGI_FORMAT_UNKNOWN;
+}
+
+void Game::DestroyObjMesh(ObjMesh *mesh){
+	if(mesh->indices) delete mesh->indices;
+	if(mesh->vertices) delete mesh->vertices;
+	if(mesh->textureResourceView) delete mesh->textureResourceView;
+
 }
