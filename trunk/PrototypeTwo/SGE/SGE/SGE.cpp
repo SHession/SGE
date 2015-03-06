@@ -31,9 +31,11 @@ Game::~Game(){
 void Game::Run(HINSTANCE hInstance, int nCmdShow){
 	InitWindow(hInstance, nCmdShow);
 	InitDevice();
-
 	Initalize();
 	LoadContent();
+
+	time = clock();
+	lastTime = (float)time;
 
 	MSG msg = {0};
     while( WM_QUIT != msg.message )
@@ -45,9 +47,11 @@ void Game::Run(HINSTANCE hInstance, int nCmdShow){
         }
         else
         {
-		//Render the application
-			Update();
-			Draw();
+			
+
+			//Render the application
+			Update(deltaTime);
+			Draw();		
         }
     }
 }
@@ -271,6 +275,10 @@ void Game::Initalize(){
 
 void Game::Draw(){
 
+	time = clock();
+    deltaTime = ((float)time - lastTime)/CLOCKS_PER_SEC;
+	lastTime = (float)time;
+
 	CB_VS_PER_OBJECT cb;
 	cb.gWorldViewProj = XMMatrixTranspose(g_World * g_View * g_Projection);
 	g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
@@ -283,7 +291,7 @@ void Game::Draw(){
 	g_pSwapChain->Present( 0, 0 );
 }
 
-void Game::Update(){
+void Game::Update(float deltaTime){
 	puts("Running");
 }
 
@@ -527,11 +535,11 @@ HRESULT Game::LoadObj(char* filename, ObjMesh* mesh){
 						position = 0;
 
 						//Check to see if the face if there is a vertex with that definition
-						for(int i =0; i < numOfFaces; i++){
-							if(faces[i].x == tempFloat4.x && faces[i].y == tempFloat4.y && faces[i].z == tempFloat4.z){
+						for(int j =0; j < numOfFaces; j++){
+							if(faces[j].x == tempFloat4.x && faces[j].y == tempFloat4.y && faces[j].z == tempFloat4.z){
 								//If found store its W value
 								found = true;
-								position = faces[i].w;	
+								position = faces[j].w;	
 							}
 
 						}
