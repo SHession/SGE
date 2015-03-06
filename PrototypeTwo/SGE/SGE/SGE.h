@@ -9,6 +9,7 @@
 #include <DirectXPackedVector.h>
 #include <wincodec.h>
 #include <stdio.h>
+#include <ctime>
 
 
 
@@ -53,7 +54,6 @@ namespace SGEFramework {
 		ID3D11Buffer*           g_pConstantBuffer;
 		ID3D11Texture2D*		g_pDepthStencil;
 		ID3D11DepthStencilView*	g_pDepthStencilView;
-		
 
 		ID3D11SamplerState*                 g_pSamplerLinear;
 
@@ -64,8 +64,11 @@ namespace SGEFramework {
 		DirectX::XMMATRIX                g_View;
 		DirectX::XMMATRIX                g_Projection;
 
-		int	numOfIndices;
-		int numOfVertices;
+		clock_t time;
+
+		float gameTime;
+		float lastTime;
+		float deltaTime;
 
 		HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow);
 		HRESULT InitDevice();
@@ -86,7 +89,7 @@ namespace SGEFramework {
 
 		__declspec( dllexport ) virtual void Initalize();
 		__declspec( dllexport ) virtual void Draw();
-	    __declspec( dllexport ) virtual void Update();
+	    __declspec( dllexport ) virtual void Update(float deltaTime);
 		__declspec( dllexport ) virtual void LoadContent();
 		__declspec( dllexport ) virtual void CleanUp();
 
