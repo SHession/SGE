@@ -10,10 +10,26 @@
 #include <wincodec.h>
 #include <stdio.h>
 #include <ctime>
-
+#include <dsound.h>
 
 
 namespace SGEFramework {
+
+	__declspec( dllexport ) class GameTime{
+
+		public:
+			GameTime();
+			void Update();
+			__declspec( dllexport ) float GetDeltaTime();
+			__declspec( dllexport ) float GetElapsedTime();
+
+		private:
+			clock_t elapsedTime;
+			float lastTime;
+			float deltaTime;
+
+
+	};
 
     __declspec( dllexport ) class Game{
 	public:
@@ -54,26 +70,24 @@ namespace SGEFramework {
 		ID3D11Buffer*           g_pConstantBuffer;
 		ID3D11Texture2D*		g_pDepthStencil;
 		ID3D11DepthStencilView*	g_pDepthStencilView;
-
 		ID3D11SamplerState*                 g_pSamplerLinear;
 
 		IWICImagingFactory* g_pFactory;
 		IWICBitmapDecoder* g_pDecoder;
 
+		LPDIRECTSOUND8 lpds;
+		IDirectSoundBuffer8 * g_pSoundBuffer;
+
 		DirectX::XMMATRIX                g_World;
 		DirectX::XMMATRIX                g_View;
 		DirectX::XMMATRIX                g_Projection;
 
-		clock_t time;
-
-		float gameTime;
-		float lastTime;
-		float deltaTime;
+		GameTime		gameTime;
 
 		HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow);
 		HRESULT InitDevice();
 
-		
+		static HRESULT CALLBACK    WndProc( HWND, UINT, WPARAM, LPARAM );
 
 	protected:
 		//.obj mesh strucure
@@ -89,7 +103,7 @@ namespace SGEFramework {
 
 		__declspec( dllexport ) virtual void Initalize();
 		__declspec( dllexport ) virtual void Draw();
-	    __declspec( dllexport ) virtual void Update(float deltaTime);
+	    __declspec( dllexport ) virtual void Update(GameTime gameTime);
 		__declspec( dllexport ) virtual void LoadContent();
 		__declspec( dllexport ) virtual void CleanUp();
 
@@ -98,9 +112,9 @@ namespace SGEFramework {
 		__declspec( dllexport ) virtual void Clear() final;
 		__declspec( dllexport ) virtual HRESULT CreateVertexAndIndexBuffer(ObjMesh *mesh) final;
 
-		__declspec( dllexport ) virtual HRESULT LoadObj(char* filename, ObjMesh* mesh) final;
+		__declspec( dllexport ) virtual HRESULT LoadObj(wchar_t * filename, ObjMesh* mesh) final;
 		__declspec( dllexport ) virtual HRESULT LoadTexture(wchar_t* filename, ObjMesh* mesh) final;
-
+		__declspec( dllexport ) virtual HRESULT LoadWave(char* filename) final;
 
 	};
 }
