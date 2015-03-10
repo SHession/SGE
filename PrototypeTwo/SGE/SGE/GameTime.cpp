@@ -22,5 +22,5 @@ float GameTime::GetDeltaTime(){
 }
 
 float GameTime::GetElapsedTime(){
-	return elapsedTime/CLOCKS_PER_SEC;
+	return (float)elapsedTime/CLOCKS_PER_SEC;
 }
