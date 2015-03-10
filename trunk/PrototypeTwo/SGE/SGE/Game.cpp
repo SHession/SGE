@@ -43,18 +43,23 @@ void Game::Run(HINSTANCE hInstance, int nCmdShow){
         {
            TranslateMessage( &msg );
            DispatchMessage( &msg );		   
+
+		   if(msg.message == WM_KEYDOWN || msg.message == WM_KEYUP || msg.message == WM_CHAR)
+		   {
+			   OutputDebugStringW(L"\n Handling Inputs");
+			   HandleInputs(msg);		
+		   }
         }
         else
         {
-			//Render the application
-			gameTime.Update();
-
-			Update(gameTime);
-			Draw();		
         }
+
+		//Render the application
+		gameTime.Update();
+		Update(gameTime);
+		Draw();		
     }
 }
-
 
 HRESULT Game::InitWindow( HINSTANCE hInstance, int nCmdShow ){
 
@@ -258,15 +263,21 @@ HRESULT Game::InitDevice(){
 	XMVECTOR Eye = XMVectorSet( 0, 3, -10, 0.0f );
 	XMVECTOR At = XMVectorSet( 0.0f, 0.0f, 0.0f, 0.0f );
 	XMVECTOR Up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
-	g_View = XMMatrixLookAtLH( Eye, At, Up );
+	Camera = XMMatrixLookAtLH( Eye, At, Up );
 
     // Initialize the projection matrix
 	g_Projection = XMMatrixPerspectiveFovLH( XM_PIDIV2, width / (FLOAT)height, 0.01f, 100.0f );
 
 		//Update constant buffer
 	CB_VS_PER_OBJECT cb;
-	cb.gWorldViewProj = XMMatrixTranspose(g_World * g_View * g_Projection);
+	cb.gWorldViewProj = XMMatrixTranspose(g_World * Camera * g_Projection);
 	g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
+
+	keyboard.w =0;
+	keyboard.a =0;
+	keyboard.s =0;
+	keyboard.d =0;
+	keyboard.space=0;
 
 	return S_OK;
 }
@@ -280,7 +291,7 @@ void Game::Draw(){
 	gameTime.Update();
 
 	CB_VS_PER_OBJECT cb;
-	cb.gWorldViewProj = XMMatrixTranspose(g_World * g_View * g_Projection);
+	cb.gWorldViewProj = XMMatrixTranspose(g_World * Camera * g_Projection);
 	g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
 	g_pImmediateContext->VSSetConstantBuffers( 0, 1, &g_pConstantBuffer );
 
@@ -295,7 +306,6 @@ void Game::Update(GameTime gameTime){
 	puts("Running");
 	g_pSoundBuffer->Play(0,0,0);
 }
-
 
 void Game::LoadContent(){
 
@@ -323,8 +333,11 @@ void Game::CleanUp(){
 
 }
 
-void Game::DrawMesh(ObjMesh*mesh){
+void Game::DrawMesh(Mesh*mesh, DirectX::XMMATRIX *world){
 	if(mesh){
+		CB_VS_PER_OBJECT cb;
+		cb.gWorldViewProj = XMMatrixTranspose((*world) * Camera * g_Projection);
+		g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
 		g_pImmediateContext->PSSetShaderResources( 0, 1, &mesh->textureResourceView );
 		g_pImmediateContext->DrawIndexed(mesh->numOfIndices,0,0);
 	}
@@ -336,14 +349,48 @@ void Game::Clear(){
 	g_pImmediateContext->ClearDepthStencilView( g_pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
 }
 
-HRESULT Game::CreateVertexAndIndexBuffer(ObjMesh *mesh){
+HRESULT Game::CreateVertexAndIndexBuffer(Mesh *meshes[], int numOfMeshes){
+
+	SimpleVertex *vertices;
+	WORD * indices;
+
+	int numOfVertices = 0;
+	int numOfIndices = 0;
+
+	int totalVertices = 0;
+	int totalIndices = 0;
+
+	for(int i=0; i <numOfMeshes; i++){
+		totalVertices += meshes[i]->numOfVertices;
+		totalIndices += meshes[i]->numOfIndices;
+	}
+
+	vertices = new SimpleVertex[totalVertices];
+	indices = new WORD[totalIndices];
+
+	for(int i=0; i <numOfMeshes; i++){
+
+		for(int j = 0; j < meshes[i]->numOfVertices; j++){
+			vertices[j + numOfVertices] = meshes[i]->vertices[j];
+		}
+		numOfVertices += meshes[i]->numOfVertices;
+
+		for(int j = 0; j < meshes[i]->numOfIndices; j++){
+			indices[j + numOfIndices] = meshes[i]->indices[j];
+		}
+
+		numOfIndices += meshes[i]->numOfIndices;
+	}
+
+	
+
 
 	HRESULT hr;
 
 	//Create a vertex buffer
 	D3D11_BUFFER_DESC bd;
 	SecureZeroMemory(&bd, sizeof(bd));
-	bd.ByteWidth = sizeof(SimpleVertex) * (mesh->numOfVertices);
+	bd.ByteWidth = sizeof(SimpleVertex) * numOfVertices;
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	bd.CPUAccessFlags = 0;
@@ -351,7 +398,7 @@ HRESULT Game::CreateVertexAndIndexBuffer(ObjMesh *mesh){
 
 	D3D11_SUBRESOURCE_DATA InitData;
 	ZeroMemory(&InitData, sizeof(InitData));
-	InitData.pSysMem = mesh->vertices;
+	InitData.pSysMem = vertices;
 	hr =  g_pd3dDevice->CreateBuffer(&bd, &InitData, &g_pVertexBuffer);
 	if(FAILED(hr)) return hr;
 
@@ -363,12 +410,12 @@ HRESULT Game::CreateVertexAndIndexBuffer(ObjMesh *mesh){
 
 	//Create an index buffer
 	SecureZeroMemory(&bd, sizeof(bd));
-	bd.ByteWidth = sizeof(WORD) * mesh->numOfIndices;
+	bd.ByteWidth = sizeof(WORD) * numOfIndices;
 	bd.Usage = D3D11_USAGE_DEFAULT;
 	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	bd.CPUAccessFlags = 0;
 
-	InitData.pSysMem = mesh->indices;
+	InitData.pSysMem = indices;
     hr = g_pd3dDevice->CreateBuffer( &bd, &InitData, &g_pIndexBuffer );
 	if(FAILED(hr)) return hr;
 
@@ -378,10 +425,14 @@ HRESULT Game::CreateVertexAndIndexBuffer(ObjMesh *mesh){
 	// Set primitive topology
 	g_pImmediateContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+	if(vertices) delete vertices;
+	if(indices) delete indices;
+
+
 	return S_OK;
 }
 
-HRESULT Game::LoadObj(wchar_t* filename, ObjMesh* mesh){
+HRESULT Game::LoadObj(wchar_t* filename, Mesh* mesh){
 	using namespace std;
 	using namespace DirectX;
 
@@ -631,7 +682,7 @@ HRESULT Game::LoadObj(wchar_t* filename, ObjMesh* mesh){
 	return S_OK;
 }
 
-HRESULT Game::LoadTexture(wchar_t* filename, ObjMesh* mesh){
+HRESULT Game::LoadTexture(wchar_t* filename, Mesh* mesh){
 	CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (LPVOID*)&g_pFactory);
 
 	g_pFactory->CreateDecoderFromFilename(filename, 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &g_pDecoder);
@@ -816,10 +867,108 @@ HRESULT Game::LoadWave(char* filename){
 	return S_OK;
 }
 
+LRESULT CALLBACK Game::WndProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam )
+{
+    PAINTSTRUCT ps;
+    HDC hdc;
+	
+
+    switch( message )
+    {
+        case WM_PAINT:
+            hdc = BeginPaint( hWnd, &ps );
+            EndPaint( hWnd, &ps );
+            break;
+
+        case WM_DESTROY:
+            PostQuitMessage( 0 );
+            break;
+
+        default:
+            return DefWindowProc( hWnd, message, wParam, lParam );
+    }
+
+    return 0;
+}
+
+HRESULT Game::HandleInputs(MSG msg){
 
 
+	if(msg.message == WM_KEYUP){
+		OutputDebugStringW(L"\n KEYUP");
+		switch(msg.wParam){
+			case 0x57:
+				keyboard.w = 0;
+				break;
+			case 0x41:
+				keyboard.a = 0;
+				break;
+			case 0x53:
+				keyboard.s = 0;
+				break;
+			case 0x44:
+				keyboard.d = 0;
+				break;
+			case 0x20:
+				keyboard.space = 0;
+				break;
+		}
 
+	}
 
+	if(msg.message == WM_KEYDOWN){
+		OutputDebugStringW(L"\n KEYDOWN");
+		switch(msg.wParam){
+			case 0x57:
+				keyboard.w = 1;
+				break;
+			case 0x41:
+				keyboard.a = 1;
+				break;
+			case 0x53:
+				keyboard.s = 1;
+				break;
+			case 0x44:
+				keyboard.d = 1;
+				break;
+			case 0x20:
+				keyboard.space = 1;
+				break;
+
+		}
+	}
+
+	if(msg.message == WM_CHAR){
+		OutputDebugStringW(L"\n KEY");
+		switch(msg.wParam){
+			case 0x57:
+				keyboard.w = 1;
+				break;
+			case 0x41:
+				keyboard.a = 1;
+				break;
+			case 0x53:
+				keyboard.s = 1;
+				break;
+			case 0x44:
+				keyboard.d = 1;
+				break;
+			case 0x20:
+				keyboard.space = 1;
+				break;
+		}
+	}
+
+	return S_OK;
+
+}
+
+void Game::DestroyMesh(Mesh *mesh){
+	if(mesh->indices) delete mesh->indices;
+	if(mesh->vertices) delete mesh->vertices;
+	if(mesh->textureResourceView) delete mesh->textureResourceView;
+
+}
 
 
 
@@ -864,30 +1013,6 @@ HRESULT CompileShader( _In_ LPCWSTR srcFile, _In_ LPCSTR entryPoint, _In_ LPCSTR
     *blob = shaderBlob;
 
     return hr;
-}
-
-LRESULT CALLBACK Game::WndProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam )
-{
-    PAINTSTRUCT ps;
-    HDC hdc;
-	
-
-    switch( message )
-    {
-        case WM_PAINT:
-            hdc = BeginPaint( hWnd, &ps );
-            EndPaint( hWnd, &ps );
-            break;
-
-        case WM_DESTROY:
-            PostQuitMessage( 0 );
-            break;
-
-        default:
-            return DefWindowProc( hWnd, message, wParam, lParam );
-    }
-
-    return 0;
 }
 
 
@@ -959,9 +1084,3 @@ DXGI_FORMAT _WICToDXGI( const GUID& guid )
     return DXGI_FORMAT_UNKNOWN;
 }
 
-void Game::DestroyObjMesh(ObjMesh *mesh){
-	if(mesh->indices) delete mesh->indices;
-	if(mesh->vertices) delete mesh->vertices;
-	if(mesh->textureResourceView) delete mesh->textureResourceView;
-
-}

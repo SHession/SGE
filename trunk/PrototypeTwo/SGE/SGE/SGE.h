@@ -79,26 +79,35 @@ namespace SGEFramework {
 		IDirectSoundBuffer8 * g_pSoundBuffer;
 
 		DirectX::XMMATRIX                g_World;
-		DirectX::XMMATRIX                g_View;
 		DirectX::XMMATRIX                g_Projection;
 
 		GameTime		gameTime;
 
 		HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow);
 		HRESULT InitDevice();
+		HRESULT HandleInputs(MSG msg);
 
 		static HRESULT CALLBACK    WndProc( HWND, UINT, WPARAM, LPARAM );
 
 	protected:
 		//.obj mesh strucure
-		struct ObjMesh{
+		struct Mesh{
 			SimpleVertex *vertices;
 			WORD *indices;
 			UINT numOfVertices;
 			UINT numOfIndices;
 			ID3D11ShaderResourceView* textureResourceView;
 		};
-		__declspec( dllexport ) virtual void DestroyObjMesh(ObjMesh *mesh) final;
+
+		struct Keyboard{
+			int w,a,s,d,space;
+			bool x;
+		};
+
+		Keyboard keyboard;
+		DirectX::XMMATRIX                Camera;
+
+		__declspec( dllexport ) virtual void DestroyMesh(Mesh *mesh) final;
 
 
 		__declspec( dllexport ) virtual void Initalize();
@@ -108,12 +117,12 @@ namespace SGEFramework {
 		__declspec( dllexport ) virtual void CleanUp();
 
 
-		__declspec( dllexport ) virtual void DrawMesh(ObjMesh*mesh) final;
+		__declspec( dllexport ) virtual void DrawMesh(Mesh*mesh, DirectX::XMMATRIX *world) final;
 		__declspec( dllexport ) virtual void Clear() final;
-		__declspec( dllexport ) virtual HRESULT CreateVertexAndIndexBuffer(ObjMesh *mesh) final;
+		__declspec( dllexport ) virtual HRESULT CreateVertexAndIndexBuffer(Mesh *meshes[], int numOfMeshes) final;
 
-		__declspec( dllexport ) virtual HRESULT LoadObj(wchar_t * filename, ObjMesh* mesh) final;
-		__declspec( dllexport ) virtual HRESULT LoadTexture(wchar_t* filename, ObjMesh* mesh) final;
+		__declspec( dllexport ) virtual HRESULT LoadObj(wchar_t * filename, Mesh* mesh) final;
+		__declspec( dllexport ) virtual HRESULT LoadTexture(wchar_t* filename, Mesh* mesh) final;
 		__declspec( dllexport ) virtual HRESULT LoadWave(char* filename) final;
 
 	};
