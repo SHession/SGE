@@ -15,23 +15,46 @@
 
 namespace SGEFramework {
 
-	__declspec( dllexport ) class GameTime{
+
+	struct SimpleVertex{
+		DirectX::XMFLOAT3 Pos;
+		DirectX::XMFLOAT3 Normal;
+		DirectX::XMFLOAT2 TexUV;
+	};
+
+	//VS constant buffer
+	struct CB_VS_PER_OBJECT{
+		DirectX::XMMATRIX gWorldViewProj;
+	};
+
+	struct Mesh{
+		SimpleVertex *vertices;
+		WORD *indices;
+		UINT numOfVertices;
+		UINT numOfIndices;
+		ID3D11ShaderResourceView* textureResourceView;
+
+		UINT startVertex;
+		UINT startIndex;
+	};
+
+
+	class GameTime{
 
 		public:
 			GameTime();
 			void Update();
-			__declspec( dllexport ) float GetDeltaTime();
-			__declspec( dllexport ) float GetElapsedTime();
+			__declspec( dllexport ) double GetDeltaTime();
+			__declspec( dllexport ) double GetElapsedTime();
 
 		private:
 			clock_t elapsedTime;
-			float lastTime;
-			float deltaTime;
-
+			clock_t deltaTime;
+			clock_t lastTime;
 
 	};
 
-    __declspec( dllexport ) class Game{
+   class Game{
 	public:
 		__declspec( dllexport ) Game();
 		__declspec( dllexport ) ~Game();
@@ -41,19 +64,6 @@ namespace SGEFramework {
 		  
 
 	private:
-		//Vertex structure
-		struct SimpleVertex{
-			DirectX::XMFLOAT3 Pos;
-			DirectX::XMFLOAT3 Normal;
-			DirectX::XMFLOAT2 TexUV;
-		};
-
-		//VS constant buffer
-		struct CB_VS_PER_OBJECT{
-			DirectX::XMMATRIX gWorldViewProj;
-		};
-
-
 		HINSTANCE	hInst;
 		HWND		mainWnd;
 		D3D_DRIVER_TYPE         g_driverType;
@@ -91,13 +101,6 @@ namespace SGEFramework {
 
 	protected:
 		//.obj mesh strucure
-		struct Mesh{
-			SimpleVertex *vertices;
-			WORD *indices;
-			UINT numOfVertices;
-			UINT numOfIndices;
-			ID3D11ShaderResourceView* textureResourceView;
-		};
 
 		struct Keyboard{
 			int w,a,s,d,space;
@@ -106,9 +109,6 @@ namespace SGEFramework {
 
 		Keyboard keyboard;
 		DirectX::XMMATRIX                Camera;
-
-		__declspec( dllexport ) virtual void DestroyMesh(Mesh *mesh) final;
-
 
 		__declspec( dllexport ) virtual void Initalize();
 		__declspec( dllexport ) virtual void Draw();
@@ -126,6 +126,10 @@ namespace SGEFramework {
 		__declspec( dllexport ) virtual HRESULT LoadWave(char* filename) final;
 
 	};
+
+	 __declspec( dllexport ) void DestroyMesh(Mesh *mesh);
+
+
 }
 
 namespace SGEGraphics {

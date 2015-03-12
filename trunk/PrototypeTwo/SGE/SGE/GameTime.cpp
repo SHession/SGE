@@ -1,5 +1,3 @@
-
-
 #include "stdafx.h"
 #include "SGE.h"
 
@@ -7,20 +5,20 @@ using namespace SGEFramework;
 
 GameTime::GameTime(){
 	elapsedTime = clock();
-	lastTime = elapsedTime;
-	deltaTime = (float)elapsedTime - lastTime;
+	deltaTime = 0;
+	lastTime = 0;
 }
 
 void GameTime::Update(){
 	elapsedTime = clock();
-	deltaTime = (float)elapsedTime - lastTime;
+	deltaTime = difftime(elapsedTime, lastTime);
 	lastTime = elapsedTime;
 }
 
-float GameTime::GetDeltaTime(){
-	return deltaTime/CLOCKS_PER_SEC;
+double GameTime::GetDeltaTime(){
+	return ((double)deltaTime/CLOCKS_PER_SEC);
 }
 
-float GameTime::GetElapsedTime(){
-	return (float)elapsedTime/CLOCKS_PER_SEC;
+double GameTime::GetElapsedTime(){
+	return ((double)elapsedTime/CLOCKS_PER_SEC);
 }

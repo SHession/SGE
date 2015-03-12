@@ -55,7 +55,6 @@ void Game::Run(HINSTANCE hInstance, int nCmdShow){
         }
 
 		//Render the application
-		gameTime.Update();
 		Update(gameTime);
 		Draw();		
     }
@@ -266,7 +265,7 @@ HRESULT Game::InitDevice(){
 	Camera = XMMatrixLookAtLH( Eye, At, Up );
 
     // Initialize the projection matrix
-	g_Projection = XMMatrixPerspectiveFovLH( XM_PIDIV2, width / (FLOAT)height, 0.01f, 100.0f );
+	g_Projection = XMMatrixPerspectiveFovLH( XM_PIDIV2, width / (FLOAT)height, 0.01f, 1000.0f );
 
 		//Update constant buffer
 	CB_VS_PER_OBJECT cb;
@@ -288,8 +287,6 @@ void Game::Initalize(){
 }
 
 void Game::Draw(){
-	gameTime.Update();
-
 	CB_VS_PER_OBJECT cb;
 	cb.gWorldViewProj = XMMatrixTranspose(g_World * Camera * g_Projection);
 	g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
@@ -298,13 +295,12 @@ void Game::Draw(){
 	g_pImmediateContext->VSSetShader( g_pVertexShader, NULL, 0 );
 	g_pImmediateContext->PSSetShader( g_pPixelShader, NULL, 0 );
 	
-
-	g_pSwapChain->Present( 0, 0 );
+	gameTime.Update();
+	g_pSwapChain->Present( 1, 0 );
 }
 
 void Game::Update(GameTime gameTime){
 	puts("Running");
-	g_pSoundBuffer->Play(0,0,0);
 }
 
 void Game::LoadContent(){
@@ -339,7 +335,7 @@ void Game::DrawMesh(Mesh*mesh, DirectX::XMMATRIX *world){
 		cb.gWorldViewProj = XMMatrixTranspose((*world) * Camera * g_Projection);
 		g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
 		g_pImmediateContext->PSSetShaderResources( 0, 1, &mesh->textureResourceView );
-		g_pImmediateContext->DrawIndexed(mesh->numOfIndices,0,0);
+		g_pImmediateContext->DrawIndexed(mesh->numOfIndices,mesh->startIndex,mesh->startVertex);
 	}
 }
 
@@ -373,12 +369,15 @@ HRESULT Game::CreateVertexAndIndexBuffer(Mesh *meshes[], int numOfMeshes){
 		for(int j = 0; j < meshes[i]->numOfVertices; j++){
 			vertices[j + numOfVertices] = meshes[i]->vertices[j];
 		}
+		meshes[i]->startVertex = numOfVertices;
 		numOfVertices += meshes[i]->numOfVertices;
+		
 
 		for(int j = 0; j < meshes[i]->numOfIndices; j++){
 			indices[j + numOfIndices] = meshes[i]->indices[j];
 		}
 
+		meshes[i]->startIndex = numOfIndices;
 		numOfIndices += meshes[i]->numOfIndices;
 	}
 
@@ -963,7 +962,7 @@ HRESULT Game::HandleInputs(MSG msg){
 
 }
 
-void Game::DestroyMesh(Mesh *mesh){
+void DestroyMesh(Mesh *mesh){
 	if(mesh->indices) delete mesh->indices;
 	if(mesh->vertices) delete mesh->vertices;
 	if(mesh->textureResourceView) delete mesh->textureResourceView;
