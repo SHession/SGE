@@ -33,8 +33,8 @@ Game::~Game(){
 void Game::Run(HINSTANCE hInstance, int nCmdShow){
 	InitWindow(hInstance, nCmdShow);
 	InitDevice();
-	Initalize();
 	LoadContent();
+	Initalize();
 
 	MSG msg = {0};
     while( WM_QUIT != msg.message )
@@ -49,9 +49,6 @@ void Game::Run(HINSTANCE hInstance, int nCmdShow){
 			   OutputDebugStringW(L"\n Handling Inputs");
 			   HandleInputs(msg);		
 		   }
-        }
-        else
-        {
         }
 
 		//Render the application
@@ -248,10 +245,12 @@ HRESULT Game::InitDevice(){
 	g_pImmediateContext->VSSetShader( g_pVertexShader, NULL, 0 );
 	g_pImmediateContext->PSSetShader( g_pPixelShader, NULL, 0 );
 
+	g_pImmediateContext->PSSetSamplers(0,1,&g_pSamplerLinear);
+
 	using namespace DirectX;
 
 	DirectSoundCreate8(NULL, &lpds,NULL);
-	lpds->SetCooperativeLevel(mainWnd, DSSCL_PRIORITY);
+	lpds->SetCooperativeLevel(mainWnd, DSSCL_NORMAL);
 
 
 	//Handle ship matrices
@@ -269,6 +268,7 @@ HRESULT Game::InitDevice(){
 
 		//Update constant buffer
 	CB_VS_PER_OBJECT cb;
+	cb.gWorld = XMMatrixTranspose(g_World);
 	cb.gWorldViewProj = XMMatrixTranspose(g_World * Camera * g_Projection);
 	g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
 
@@ -288,6 +288,7 @@ void Game::Initalize(){
 
 void Game::Draw(){
 	CB_VS_PER_OBJECT cb;
+	cb.gWorld = XMMatrixTranspose(g_World);
 	cb.gWorldViewProj = XMMatrixTranspose(g_World * Camera * g_Projection);
 	g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
 	g_pImmediateContext->VSSetConstantBuffers( 0, 1, &g_pConstantBuffer );
@@ -325,15 +326,15 @@ void Game::CleanUp(){
 	if(g_pFactory) g_pFactory->Release();
 	if(g_pDecoder) g_pDecoder->Release();
 
-	if(g_pSoundBuffer) g_pSoundBuffer->Release();
-
 }
 
 void Game::DrawMesh(Mesh*mesh, DirectX::XMMATRIX *world){
 	if(mesh){
 		CB_VS_PER_OBJECT cb;
+		cb.gWorld = XMMatrixTranspose(g_World);
 		cb.gWorldViewProj = XMMatrixTranspose((*world) * Camera * g_Projection);
 		g_pImmediateContext->UpdateSubresource(g_pConstantBuffer,0,NULL,&cb,0,0);
+
 		g_pImmediateContext->PSSetShaderResources( 0, 1, &mesh->textureResourceView );
 		g_pImmediateContext->DrawIndexed(mesh->numOfIndices,mesh->startIndex,mesh->startVertex);
 	}
@@ -440,14 +441,18 @@ HRESULT Game::LoadObj(wchar_t* filename, Mesh* mesh){
 
 	mesh->numOfIndices =0;
 	mesh->numOfVertices =0;
+	mesh->startIndex =0;
+	mesh->startVertex =0;
+	mesh->textureResourceView = nullptr;
+	OutputDebugStringW(L"\n Inits");
+
 
 	UINT numOfSubests = 0;
-
 	//Vectors to store the found data
-	vector<XMFLOAT3> vertices;
-	vector<XMFLOAT2> uvs;
-	vector<XMFLOAT3> normals;
-	vector<XMFLOAT4> faces;
+	vector<XMFLOAT3> vertices (0);
+	vector<XMFLOAT2> uvs (0);
+	vector<XMFLOAT3> normals (0);
+	vector<XMFLOAT4> faces (0);
 
 	//UINTs to store the size of the vectors
 	UINT numOfVertices = 0;
@@ -457,10 +462,10 @@ HRESULT Game::LoadObj(wchar_t* filename, Mesh* mesh){
 
 	//Vector of created vertices
 	UINT numOfUVertices = 0;
-	vector<SimpleVertex> uniqueVertices;
+	vector<SimpleVertex> uniqueVertices (0);
 	//Vector of indices
 	UINT numOfIndices = 0;
-	vector<WORD> indices;
+	vector<WORD> indices (0);
 
 	//Temp variables
 	XMFLOAT2 tempFloat2;
@@ -572,7 +577,7 @@ HRESULT Game::LoadObj(wchar_t* filename, Mesh* mesh){
 						//Check for file format (Supported V, V/VT, V/VT/VN)
 						if(slashes[0] == string::npos)
 						{
-							tempFloat4 = XMFLOAT4 (stof(floats[i]), -1,-1, -1);
+							tempFloat4 = XMFLOAT4 (stof(floats[i]) - 1, -1,-1, -1);
 						}
 						else if(slashes[1] == string::npos)
 						{
@@ -622,13 +627,17 @@ HRESULT Game::LoadObj(wchar_t* filename, Mesh* mesh){
 							tempVertex.Pos = vertices[faces[numOfFaces - 1].x];
 
 							if(faces[numOfFaces-1].y != -1){
-								tempVertex.TexUV = //uvs[faces[numOfFaces - 1].y];
-								XMFLOAT2( uvs[faces[numOfFaces - 1].y].x , 1 - uvs[faces[numOfFaces - 1].y].y);
+								tempVertex.TexUV = 
+									XMFLOAT2( uvs[faces[numOfFaces - 1].y].x , 1 - uvs[faces[numOfFaces - 1].y].y);
 							}
+							else 
+								tempVertex.TexUV = XMFLOAT2(0,0);
 
 							if(faces[numOfFaces-1].z != -1){
 								tempVertex.Normal = normals[faces[numOfFaces - 1].z];
 							}
+							else 
+								tempVertex.Normal = XMFLOAT3(0,0,0);
 
 							uniqueVertices.push_back(tempVertex);
 							numOfUVertices++;
@@ -654,9 +663,12 @@ HRESULT Game::LoadObj(wchar_t* filename, Mesh* mesh){
 			}		
 		}
 		else{
+			OutputDebugStringW(L"\n Failed to open");
 			return E_FAIL;
 		}
 
+
+	OutputDebugStringW(L"\n Copyin");
 
 	mesh->numOfVertices = numOfUVertices;
 	mesh->numOfIndices = numOfIndices;
@@ -677,6 +689,10 @@ HRESULT Game::LoadObj(wchar_t* filename, Mesh* mesh){
 
 	//Close the file and return
 	fileStream.close();
+
+
+	OutputDebugStringW(L"\n Done");
+	
 
 	return S_OK;
 }
@@ -703,6 +719,11 @@ HRESULT Game::LoadTexture(wchar_t* filename, Mesh* mesh){
 
 	size_t bpp = 0;
 	bpp = _WICBitsPerPixel( pixelFormat, g_pFactory);
+
+	if(format == DXGI_FORMAT_UNKNOWN){
+		format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        bpp = 0;
+	}
 
 	// Allocate temporary memory for image
     size_t rowPitch = ( width * bpp + 7 ) / 8;
@@ -749,7 +770,7 @@ HRESULT Game::LoadTexture(wchar_t* filename, Mesh* mesh){
 	return S_OK;
 }
 
-HRESULT Game::LoadWave(char* filename){
+HRESULT Game::LoadWave(char* filename, Sound *sound){
 	//http://www.rastertek.com/dx11tut14.html
 	struct WaveHeaderType
 	{
@@ -835,7 +856,7 @@ HRESULT Game::LoadWave(char* filename){
 	bufferDesc.guid3DAlgorithm = GUID_NULL;
 
 	result = lpds->CreateSoundBuffer(&bufferDesc, &tempBuffer, NULL);
-	result = tempBuffer->QueryInterface(IID_IDirectSoundBuffer8, (void**)&g_pSoundBuffer);
+	result = tempBuffer->QueryInterface(IID_IDirectSoundBuffer8, (void**)&sound->soundBuffer);
 
 	tempBuffer->Release();
 	tempBuffer = 0;
@@ -848,22 +869,28 @@ HRESULT Game::LoadWave(char* filename){
 
 	error = fclose(filePtr);
 
-	result = (g_pSoundBuffer)->Lock(0, waveFileHeader.dataSize, (void**)&bufferPtr, (DWORD*)&bufferSize, NULL, 0, 0);
+	result = (sound->soundBuffer)->Lock(0, waveFileHeader.dataSize, (void**)&bufferPtr, (DWORD*)&bufferSize, NULL, 0, 0);
 
 	memcpy(bufferPtr, waveData, waveFileHeader.dataSize);
 
-	result = (g_pSoundBuffer)->Unlock((void*)bufferPtr, bufferSize, NULL, 0);
+	result = (sound->soundBuffer)->Unlock((void*)bufferPtr, bufferSize, NULL, 0);
 
 	// Release the wave data since it was copied into the secondary buffer.
 	delete [] waveData;
 	waveData = 0;
  
-	
-	return S_OK;
-
-
+	sound->volume = DSBVOLUME_MAX;
 
 	return S_OK;
+}
+
+void Game::SoundPlay(Sound *sound, bool loop){
+	sound->soundBuffer->SetCurrentPosition(0);
+	sound->soundBuffer->SetVolume(sound->volume);
+	if(loop)
+		sound->soundBuffer->Play(0,0,DSBPLAY_LOOPING);
+	else 
+		sound->soundBuffer->Play(0,0,0);
 }
 
 LRESULT CALLBACK Game::WndProc( HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam )
@@ -962,7 +989,7 @@ HRESULT Game::HandleInputs(MSG msg){
 
 }
 
-void DestroyMesh(Mesh *mesh){
+void SGEFramework::DestroyMesh(Mesh *mesh){
 	if(mesh->indices) delete mesh->indices;
 	if(mesh->vertices) delete mesh->vertices;
 	if(mesh->textureResourceView) delete mesh->textureResourceView;
