@@ -24,8 +24,10 @@ namespace SGEFramework {
 
 	//VS constant buffer
 	struct CB_VS_PER_OBJECT{
+		DirectX::XMMATRIX gWorld;
 		DirectX::XMMATRIX gWorldViewProj;
 	};
+
 
 	struct Mesh{
 		SimpleVertex *vertices;
@@ -36,6 +38,16 @@ namespace SGEFramework {
 
 		UINT startVertex;
 		UINT startIndex;
+	};
+
+	struct Keyboard{
+			int w,a,s,d,space;
+			bool x;
+	};
+
+	struct Sound{
+		IDirectSoundBuffer8 * soundBuffer;
+		float volume;
 	};
 
 
@@ -86,7 +98,7 @@ namespace SGEFramework {
 		IWICBitmapDecoder* g_pDecoder;
 
 		LPDIRECTSOUND8 lpds;
-		IDirectSoundBuffer8 * g_pSoundBuffer;
+		
 
 		DirectX::XMMATRIX                g_World;
 		DirectX::XMMATRIX                g_Projection;
@@ -102,10 +114,6 @@ namespace SGEFramework {
 	protected:
 		//.obj mesh strucure
 
-		struct Keyboard{
-			int w,a,s,d,space;
-			bool x;
-		};
 
 		Keyboard keyboard;
 		DirectX::XMMATRIX                Camera;
@@ -121,9 +129,11 @@ namespace SGEFramework {
 		__declspec( dllexport ) virtual void Clear() final;
 		__declspec( dllexport ) virtual HRESULT CreateVertexAndIndexBuffer(Mesh *meshes[], int numOfMeshes) final;
 
+		__declspec( dllexport ) virtual void SoundPlay(Sound *sound, bool loop) final;
+
 		__declspec( dllexport ) virtual HRESULT LoadObj(wchar_t * filename, Mesh* mesh) final;
 		__declspec( dllexport ) virtual HRESULT LoadTexture(wchar_t* filename, Mesh* mesh) final;
-		__declspec( dllexport ) virtual HRESULT LoadWave(char* filename) final;
+		__declspec( dllexport ) virtual HRESULT LoadWave(char* filename, Sound *sound) final;
 
 	};
 
