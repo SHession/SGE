@@ -11,16 +11,15 @@ namespace SGE {
 		class GameObject;
 	}
 
-
 	namespace Graphics {
 		//Abstract class for a graphics device
 		class GraphicDevice{
 			public:
-				virtual HRESULT InitializeDevice() = 0;
+				virtual HRESULT InitializeDevice(HWND hWnd) = 0;
 				virtual HRESULT Draw() = 0;
 				virtual HRESULT DrawGameObject(Framework::GameObject) = 0;
 				virtual HRESULT Clear() = 0;
-				virtual HRESULT Release() = 0;
+				virtual HRESULT CleanUp() = 0;
 		};
 	}
 
@@ -29,15 +28,9 @@ namespace SGE {
 		class SoundDevice{
 			public:
 				virtual HRESULT InitializeDevice() = 0;
-				virtual HRESULT Release() = 0;
+				virtual HRESULT CleanUp() = 0;
 		};
 	}
-
-	namespace Input{
-
-
-	}
-
 
 	namespace Framework {
 		//Tracks the time stats of a game
@@ -52,6 +45,13 @@ namespace SGE {
 				clock_t elapsedTime;
 				clock_t deltaTime;
 				clock_t lastTime;
+		};
+
+		//Tracks keyboard inputs
+		class GameInputs{
+			public:
+				GameInputs();
+				void HandleInput(MSG msg);
 		};
 
 		//Game object class can be used for objects within a game
@@ -76,13 +76,14 @@ namespace SGE {
 			private:
 				HINSTANCE						hInst;
 				HWND							mainWnd;
-				Graphics::GraphicDevice *		graphics;
-				Sound::SoundDevice *			sound;
 				GameTime						gameTime;
 
 				HRESULT InitializeWindow(HINSTANCE hInstance, int nCmdShow);
 				static HRESULT CALLBACK    WndProc( HWND, UINT, WPARAM, LPARAM );
 			protected:
+				Graphics::GraphicDevice *		graphics;
+				Sound::SoundDevice *			sound;
+
 				__declspec( dllexport ) virtual void LoadContent();
 				__declspec( dllexport ) virtual void Initialize();
 				__declspec( dllexport ) virtual void Update(GameTime gameTime);

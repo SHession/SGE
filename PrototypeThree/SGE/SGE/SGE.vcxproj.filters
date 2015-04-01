@@ -13,8 +13,14 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Source Files\Framework">
+    <Filter Include="Source Files\SGE">
+      <UniqueIdentifier>{229f336e-64af-4192-849d-3932dae348ac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\SGE\Framework">
       <UniqueIdentifier>{730c21a1-971d-4460-bb1e-84bd62effa63}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\SGD3D">
+      <UniqueIdentifier>{a2b336ca-4e8d-4873-99db-680d49138206}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,11 +33,11 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SGD3D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SGE.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AssemblyInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -39,13 +45,16 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Game.cpp">
-      <Filter>Source Files\Framework</Filter>
+      <Filter>Source Files\SGE\Framework</Filter>
     </ClCompile>
     <ClCompile Include="GameTime.cpp">
-      <Filter>Source Files\Framework</Filter>
+      <Filter>Source Files\SGE\Framework</Filter>
     </ClCompile>
     <ClCompile Include="GameObject.cpp">
-      <Filter>Source Files\Framework</Filter>
+      <Filter>Source Files\SGE\Framework</Filter>
+    </ClCompile>
+    <ClCompile Include="DirectXDevice.cpp">
+      <Filter>Source Files\SGD3D</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

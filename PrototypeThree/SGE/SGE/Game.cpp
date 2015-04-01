@@ -28,7 +28,7 @@ HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
 		MessageBox( NULL, L"No Graphics Device Assigned", L"Error", MB_OK );
         return E_FAIL;
 	}
-	result = graphics->InitializeDevice();
+	result = graphics->InitializeDevice(mainWnd);
 	if (FAILED(result)){
 		MessageBox( NULL, L"Graphics Initialize Failed", L"Error", MB_OK );
         return E_FAIL;
@@ -146,6 +146,8 @@ void Game::Draw(){
 }
 
 void Game::CleanUp(){
-	if(graphics) graphics->Release();
-	if(sound) sound->Release();
+	if(graphics) graphics->CleanUp();
+	if(sound) sound->CleanUp();
 }
+
+
