@@ -1,8 +1,8 @@
 
 #pragma once
 #include "SGE.h"
-
 #include <dsound.h>
+#include <vector>
 
 namespace SGDS {
 
@@ -12,10 +12,13 @@ namespace SGDS {
 			__declspec( dllexport ) ~DirectSoundDevice();
 
 			HRESULT InitializeDevice(HWND hWnd);
+			HRESULT LoadWav(char* filename, SGE::Sound::Sound *sound);
+			HRESULT PlaySound(SGE::Sound::Sound *sound);
 			HRESULT CleanUp();
 
 		private:
 			LPDIRECTSOUND8 lpds;
+			std::vector<IDirectSoundBuffer8*> sounds;
 				
 	};
 

@@ -25,11 +25,19 @@ namespace SGE {
 
 	namespace Sound{
 		//Abstract class for a sound device
+		struct Sound{
+			int index;
+			float volume;
+		};
+
 		class SoundDevice{
 			public:
 				virtual HRESULT InitializeDevice(HWND hWnd) = 0;
+				virtual HRESULT LoadWav(char* filename, Sound *sound) = 0;
+				virtual HRESULT PlaySound(Sound *sound) = 0;
 				virtual HRESULT CleanUp() = 0;
 		};
+
 	}
 
 	namespace Framework {
