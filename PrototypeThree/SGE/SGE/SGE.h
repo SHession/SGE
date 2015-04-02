@@ -27,7 +27,7 @@ namespace SGE {
 		//Abstract class for a sound device
 		class SoundDevice{
 			public:
-				virtual HRESULT InitializeDevice() = 0;
+				virtual HRESULT InitializeDevice(HWND hWnd) = 0;
 				virtual HRESULT CleanUp() = 0;
 		};
 	}
