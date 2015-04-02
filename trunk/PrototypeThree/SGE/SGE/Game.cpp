@@ -39,7 +39,7 @@ HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
 		MessageBox( NULL, L"No Sound Device Assigned", L"Error", MB_OK );
         return E_FAIL;
 	}
-	result = sound->InitializeDevice();
+	result = sound->InitializeDevice(mainWnd);
 	if (FAILED(result)){
 		MessageBox( NULL, L"Sound Initialize Failed", L"Error", MB_OK );
         return E_FAIL;

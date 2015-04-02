@@ -53,10 +53,7 @@ HRESULT DirectXDevice::InitializeDevice(HWND hWnd){
 	HRESULT result = D3D11CreateDeviceAndSwapChain(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, 0, 0,D3D11_SDK_VERSION, &sd, &swapChain
 												,&d3dDevice, &featureLevel, &immediateContext);
 
-	if (FAILED(result)){
-		MessageBox( NULL, L"Failed to Create Device and Swap Chain", L"Error", MB_OK );
-        return E_FAIL;
-	}
+	if (FAILED(result)) return E_FAIL;
 
 	//Add a render target view to the swap chain
 	ID3D11Texture2D *BackBuffer;

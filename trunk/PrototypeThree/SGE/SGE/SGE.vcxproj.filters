@@ -22,6 +22,9 @@
     <Filter Include="Source Files\SGD3D">
       <UniqueIdentifier>{a2b336ca-4e8d-4873-99db-680d49138206}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\SGDS">
+      <UniqueIdentifier>{b353cbdd-10af-471a-b646-cfa547bd680a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SGE.h">
@@ -34,6 +37,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SGD3D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SGDS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -55,6 +61,9 @@
     </ClCompile>
     <ClCompile Include="DirectXDevice.cpp">
       <Filter>Source Files\SGD3D</Filter>
+    </ClCompile>
+    <ClCompile Include="DirectSoundDevice.cpp">
+      <Filter>Source Files\SGDS</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
