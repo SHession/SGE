@@ -14,12 +14,12 @@ namespace SGDS {
 			HRESULT InitializeDevice(HWND hWnd);
 			HRESULT LoadWav(char* filename, SGE::Sound::Sound *sound);
 			HRESULT PlaySound(SGE::Sound::Sound *sound);
-			HRESULT CleanUp();
 
 		private:
 			LPDIRECTSOUND8 lpds;
 			std::vector<IDirectSoundBuffer8*> sounds;
-				
+
+			HRESULT CleanUp();
 	};
 
 }

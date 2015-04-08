@@ -1,15 +1,16 @@
 #include "stdafx.h"
 #include "SGE.h"
+#include <malloc.h>
 
 using namespace SGE::Framework;
 
 Game::Game(){
-
-
+	graphics = NULL;
+	sound = NULL;
 }
 
 Game::~Game(){
-	CleanUp();
+	
 }
 
 HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
@@ -68,6 +69,7 @@ HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
 		Update(gameTime);
 		Draw();		
     }
+	CleanUp();
 
 	return S_OK;
 }
@@ -141,7 +143,6 @@ void Game::Update(GameTime gameTime){
 
 void Game::Draw(){
 
-	graphics->Draw();
 	gameTime.Update();
 }
 

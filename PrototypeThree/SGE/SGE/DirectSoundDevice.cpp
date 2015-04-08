@@ -6,7 +6,6 @@ using namespace SGDS;
 
 DirectSoundDevice::DirectSoundDevice(){
 
-
 }
 
 DirectSoundDevice::~DirectSoundDevice(){
@@ -43,17 +42,19 @@ HRESULT DirectSoundDevice::LoadWav(char* filename, SGE::Sound::Sound *sound){
 		unsigned long dataSize;
 	};
 
+	sound->index = -1;
+
 	int error;
-	FILE* filePtr;
+	FILE* filePtr = NULL;
 	unsigned int count;
 	WaveHeaderType waveFileHeader;
 	WAVEFORMATEX waveFormat;
 	DSBUFFERDESC bufferDesc;
 	HRESULT result;
-	IDirectSoundBuffer* tempBuffer;
-	unsigned char* waveData;
-	unsigned char *bufferPtr;
-	unsigned long bufferSize;
+	IDirectSoundBuffer* tempBuffer = NULL;
+	unsigned char* waveData = NULL;
+	unsigned char *bufferPtr = NULL;
+	unsigned long bufferSize = NULL;
 
 	fopen_s(&filePtr, filename, "rb");
 	count = fread(&waveFileHeader, sizeof(waveFileHeader), 1, filePtr);
@@ -109,7 +110,7 @@ HRESULT DirectSoundDevice::LoadWav(char* filename, SGE::Sound::Sound *sound){
 	bufferDesc.lpwfxFormat = &waveFormat;
 	bufferDesc.guid3DAlgorithm = GUID_NULL;
 
-	IDirectSoundBuffer8 * soundBuffer;
+	IDirectSoundBuffer8 * soundBuffer = NULL;
 
 	result = lpds->CreateSoundBuffer(&bufferDesc, &tempBuffer, NULL);
 	if(FAILED(result)) return result;
@@ -148,14 +149,16 @@ HRESULT DirectSoundDevice::LoadWav(char* filename, SGE::Sound::Sound *sound){
 }
 
 HRESULT DirectSoundDevice::PlaySound(SGE::Sound::Sound *sound){
+	if(sound->index == -1)
+		return E_FAIL;
 	sounds[sound->index]->SetCurrentPosition(0);
-	sounds[sound->index]->SetVolume(sound->volume);
+	sounds[sound->index]->SetVolume((LONG)sound->volume);
 	sounds[sound->index]->Play(0,0,0);
 	return S_OK;
 }
 
 HRESULT DirectSoundDevice::CleanUp(){
-	for(int i =0; i < sounds.size(); i++){
+	for(UINT i =0; i < sounds.size(); i++){
 		if(sounds[i]) sounds[i]->Release();
 	}
 
