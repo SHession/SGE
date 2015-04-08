@@ -12,14 +12,37 @@ namespace SGE {
 	}
 
 	namespace Graphics {
+		struct VertexShader{
+			int index;
+		};
+
+		struct PixelShader{
+			int index;
+		};
+
+		struct Mesh{
+			int index;
+		};
+
+		struct Texture{
+			int index;
+		};
+
 		//Abstract class for a graphics device
 		class GraphicDevice{
 			public:
 				virtual HRESULT InitializeDevice(HWND hWnd) = 0;
 				virtual HRESULT Draw() = 0;
+				virtual HRESULT DrawMesh(Graphics::Mesh) = 0;
 				virtual HRESULT DrawGameObject(Framework::GameObject) = 0;
 				virtual HRESULT Clear() = 0;
 				virtual HRESULT CleanUp() = 0;
+
+				
+				virtual HRESULT LoadObj(wchar_t * filename, Mesh* mesh) = 0;				
+				virtual HRESULT LoadTexture(wchar_t* filename, Texture* texture) = 0;
+				virtual HRESULT LoadVShader(wchar_t* filename, char* entryPoint, VertexShader *shader) = 0;
+				virtual HRESULT LoadPShader(wchar_t* filename, char* entryPoint, PixelShader *shader) = 0;
 		};
 	}
 

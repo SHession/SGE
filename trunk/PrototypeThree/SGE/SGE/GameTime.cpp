@@ -11,7 +11,7 @@ GameTime::GameTime(){
 
 void GameTime::Update(){
 	elapsedTime = clock();
-	deltaTime = difftime(elapsedTime, lastTime);
+	deltaTime = (clock_t)difftime(elapsedTime, lastTime);
 	lastTime = elapsedTime;
 }
 
