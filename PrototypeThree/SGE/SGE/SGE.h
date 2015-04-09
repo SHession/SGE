@@ -3,7 +3,7 @@
 #pragma once
 #include <Windows.h>
 #include <ctime>
-
+#include <map>
 
 namespace SGE {
 	//Forward Declertaions
@@ -63,6 +63,39 @@ namespace SGE {
 
 	}
 
+	namespace Input{
+		enum Keys {
+			A = 0x41, B = 0X42, C = 0X43, D = 0x44, E = 0X45,
+			F = 0x46, G = 0X47, H = 0X48, I = 0x49, J = 0X4A,
+			K = 0x4B, L = 0X4C, M = 0X4D, N = 0x4E, O = 0X4F,
+			P = 0x50, Q = 0X51, R = 0X52, S = 0x53, T = 0X54,
+			U = 0X55, V = 0X56, W = 0x57, X = 0X58, Y = 0x59,
+			Z = 0X5A,
+			UP = 0x26, LEFT = 0X25, RIGHT = 0X27, DOWN = 0X28,
+			D0 = 0X30, D1 = 0X31, D2 = 0X32, D3 = 0X33,
+			D4 = 0X34, D5 = 0X35, D6 = 0X36, D7 = 0X37,
+			D8 = 0X38, D9 = 0X39,
+			ENTER = 0x0D, BACKSPACE = 0X08, TAB = 0X09, CLEAR = 0X0C,
+			SHIFT = 0X10, ESCAPE = 0x1b
+		};
+
+		enum KeyState{
+			KeyDown = 1, Key = 2, KeyUp = 3, NotKey = 0
+		};
+
+		//Tracks keyboard inputs
+		class GameInputs{
+			public:
+				GameInputs();
+				void HandleInput(MSG msg);
+				void Update();
+
+				__declspec( dllexport ) KeyState GetKeyState(Keys key);
+				std::map<Keys,int> state;
+		};
+
+	}
+
 	namespace Framework {
 		//Tracks the time stats of a game
 		class GameTime{
@@ -76,13 +109,6 @@ namespace SGE {
 				clock_t elapsedTime;
 				clock_t deltaTime;
 				clock_t lastTime;
-		};
-
-		//Tracks keyboard inputs
-		class GameInputs{
-			public:
-				GameInputs();
-				void HandleInput(MSG msg);
 		};
 
 		//Game object class can be used for objects within a game
@@ -114,6 +140,7 @@ namespace SGE {
 			protected:
 				Graphics::GraphicDevice *		graphics;
 				Sound::SoundDevice *			sound;
+				Input::GameInputs				inputs;
 
 				__declspec( dllexport ) virtual void LoadContent();
 				__declspec( dllexport ) virtual void Initialize();
