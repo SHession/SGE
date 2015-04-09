@@ -130,7 +130,6 @@ HRESULT DirectXDevice::DrawGameObject(SGE::Framework::GameObject){
 }
 
 HRESULT DirectXDevice::Clear(){
-	OutputDebugStringW(L"Clearing \n");
 	float ClearColor[4] = { 0.1f, 0.1f, 0.3f, 1.0f }; //red,green,blue,alpha
     immediateContext->ClearRenderTargetView( renderTargetView, ClearColor );
 	immediateContext->ClearDepthStencilView( depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );

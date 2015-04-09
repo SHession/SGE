@@ -25,6 +25,9 @@
     <Filter Include="Source Files\SGDS">
       <UniqueIdentifier>{b353cbdd-10af-471a-b646-cfa547bd680a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\SGE\Input">
+      <UniqueIdentifier>{c469f3f8-9145-4a91-bd1e-09862297419c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SGE.h">
@@ -64,6 +67,9 @@
     </ClCompile>
     <ClCompile Include="DirectSoundDevice.cpp">
       <Filter>Source Files\SGDS</Filter>
+    </ClCompile>
+    <ClCompile Include="GameInputs.cpp">
+      <Filter>Source Files\SGE\Input</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

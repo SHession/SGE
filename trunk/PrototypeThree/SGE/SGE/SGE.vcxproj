@@ -88,6 +88,7 @@
     <ClCompile Include="DirectSoundDevice.cpp" />
     <ClCompile Include="DirectXDevice.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="GameInputs.cpp" />
     <ClCompile Include="GameObject.cpp" />
     <ClCompile Include="GameTime.cpp" />
     <ClCompile Include="Stdafx.cpp">

@@ -61,13 +61,15 @@ HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
 
 		   if(msg.message == WM_KEYDOWN || msg.message == WM_KEYUP || msg.message == WM_CHAR)
 		   {
-
+			   inputs.HandleInput(msg);
 		   }
         }
 
 		//Render the application
 		Update(gameTime);
 		Draw();		
+		gameTime.Update();
+		inputs.Update();
     }
 	CleanUp();
 
@@ -143,7 +145,7 @@ void Game::Update(GameTime gameTime){
 
 void Game::Draw(){
 
-	gameTime.Update();
+	
 }
 
 void Game::CleanUp(){
