@@ -68,7 +68,7 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>User32.lib;d3d11.lib;d3dcompiler.lib;winmm.lib;comctl32.lib;DSound.lib;dxguid.lib</AdditionalDependencies>
+      <AdditionalDependencies>Ole32.lib;User32.lib;d3d11.lib;d3dcompiler.lib;winmm.lib;comctl32.lib;DSound.lib;dxguid.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

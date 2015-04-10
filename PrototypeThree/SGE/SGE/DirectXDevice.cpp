@@ -12,6 +12,13 @@ DirectXDevice::DirectXDevice(){
 	renderTargetView = NULL;
 	depthStencil = NULL;
 	depthStencilView = NULL;
+	vertexBuffer = NULL;
+	indexBuffer = NULL;
+	constantBuffer = NULL;
+	samplerLinear = NULL;
+	imagingFactory = NULL;
+	bitmapDecoder = NULL;
+	inputLayout = NULL;
 }
 
 DirectXDevice::~DirectXDevice(){
@@ -107,6 +114,131 @@ HRESULT DirectXDevice::InitializeDevice(HWND hWnd){
 
 	//Bind an array of viewports to the rasterizer stage of the pipeline.
 	immediateContext->RSSetViewports(1,&vp);
+
+	//Create constant buffer(s)
+	D3D11_BUFFER_DESC bd;
+	SecureZeroMemory(&bd, sizeof(bd));
+	bd.ByteWidth = sizeof(CB_VS_PER_OBJECT);
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = 0;
+
+	result = d3dDevice->CreateBuffer(&bd, NULL, &constantBuffer);
+	if(FAILED(result)) return result;
+
+	D3D11_SAMPLER_DESC sampDesc;
+    ZeroMemory( &sampDesc, sizeof(sampDesc) );
+    sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+    sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+    sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    sampDesc.MinLOD = 0;
+    sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+    result = d3dDevice->CreateSamplerState( &sampDesc, &samplerLinear );
+    if( FAILED( result ) ) return result;
+
+	float ClearColor[4] = { 0, 0, 0, 0 }; //red,green,blue,alpha
+    immediateContext->ClearRenderTargetView( renderTargetView, ClearColor );
+	immediateContext->ClearDepthStencilView( depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
+
+
+	result = swapChain->Present( 1, 0 );
+
+	return S_OK;
+}
+
+HRESULT DirectXDevice::ProcessContent(){
+
+	Vertex *vertices;
+	WORD * indices;
+
+	int numOfVertices = 0;
+	int numOfIndices = 0;
+
+	int totalVertices = 0;
+	int totalIndices = 0;
+
+	for(UINT i=0; i < meshes.size(); i++){
+		totalVertices += meshes[i]->numOfVertices;
+		totalIndices += meshes[i]->numOfIndices;
+	}
+
+	vertices = new Vertex[totalVertices];
+	indices = new WORD[totalIndices];
+
+	for(UINT i=0; i < meshes.size(); i++){
+		for(UINT j = 0; j < meshes[i]->numOfVertices; j++){
+			vertices[j + numOfVertices] = meshes[i]->vertices[j];
+		}
+		meshes[i]->startVertex = numOfVertices;
+		numOfVertices += meshes[i]->numOfVertices;
+		
+		for(UINT j = 0; j < meshes[i]->numOfIndices; j++){
+			indices[j + numOfIndices] = meshes[i]->indices[j];
+		}
+
+		meshes[i]->startIndex = numOfIndices;
+		numOfIndices += meshes[i]->numOfIndices;
+	}
+
+
+	HRESULT result;
+
+	//Create a vertex buffer
+	D3D11_BUFFER_DESC bd;
+	SecureZeroMemory(&bd, sizeof(bd));
+	bd.ByteWidth = sizeof(Vertex) * numOfVertices;
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+
+
+	D3D11_SUBRESOURCE_DATA InitData;
+	ZeroMemory(&InitData, sizeof(InitData));
+	InitData.pSysMem = vertices;
+	result =  d3dDevice->CreateBuffer(&bd, &InitData, &vertexBuffer);
+	if(FAILED(result)) return result;
+
+	//Set vertex buffer
+	UINT stride = sizeof(Vertex);
+	UINT offset = 0;
+	immediateContext->IASetVertexBuffers(0,1, &vertexBuffer, &stride, &offset);
+
+
+	//Create an index buffer
+	SecureZeroMemory(&bd, sizeof(bd));
+	bd.ByteWidth = sizeof(WORD) * numOfIndices;
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	bd.CPUAccessFlags = 0;
+
+	InitData.pSysMem = indices;
+    result = d3dDevice->CreateBuffer( &bd, &InitData, &indexBuffer );
+	if(FAILED(result)) return result;
+
+	// Set index buffer
+    immediateContext->IASetIndexBuffer( indexBuffer, DXGI_FORMAT_R16_UINT, 0 );
+
+	// Set primitive topology
+	immediateContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	if(vertices) delete vertices;
+	if(indices) delete indices;
+
+	if(vertexShaders[0])
+		immediateContext->VSSetShader( vertexShaders[0], NULL, 0 );
+	else 
+		return E_FAIL;
+	if(pixelShaders[0])
+		immediateContext->PSSetShader( pixelShaders[0], NULL, 0 );
+	else 
+		return E_FAIL;
+
+	if(samplerLinear)
+		immediateContext->PSSetSamplers(0,1,&samplerLinear);
+	else 
+		return E_FAIL;
 
 
 	return S_OK;
@@ -397,6 +529,90 @@ HRESULT DirectXDevice::LoadObj(wchar_t * filename, SGE::Graphics::Mesh* mesh){
 
 HRESULT DirectXDevice::LoadTexture(wchar_t* filename, SGE::Graphics::Texture* texture){
 
+	texture->index = -1;
+	HRESULT result;
+
+	result = CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, __uuidof(IWICImagingFactory), (LPVOID*)&imagingFactory);
+	if (FAILED(result)) return result;
+	result = imagingFactory->CreateDecoderFromFilename(filename, 0, GENERIC_READ, WICDecodeMetadataCacheOnDemand, &bitmapDecoder);
+	if (FAILED(result)) return result;
+
+	IWICBitmapFrameDecode* frame;
+	result = bitmapDecoder->GetFrame(0, &frame);
+	if (FAILED(result)) return result;
+	WICPixelFormatGUID pixelFormat;
+	result = frame->GetPixelFormat(&pixelFormat);
+	if (FAILED(result)) return result;
+
+	DXGI_FORMAT format = _WICToDXGI( pixelFormat);
+
+	WICPixelFormatGUID convertGUID;
+    memcpy( &convertGUID, &pixelFormat, sizeof(WICPixelFormatGUID) );
+
+	UINT width, height;
+
+	result = frame->GetSize(&width, &height);
+	if (FAILED(result)) return result;
+
+	size_t bpp = 0;
+	bpp = _WICBitsPerPixel( pixelFormat, imagingFactory);
+
+	if(format == DXGI_FORMAT_UNKNOWN){
+		format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        bpp = 0;
+	}
+
+	// Allocate temporary memory for image
+    size_t rowPitch = ( width * bpp + 7 ) / 8;
+    size_t imageSize = rowPitch * height;
+
+	std::unique_ptr<uint8_t[]> temp( new uint8_t[ imageSize ] );
+
+	result = frame->CopyPixels( 0, static_cast<UINT>( rowPitch ), static_cast<UINT>( imageSize ), temp.get() );  
+	if (FAILED(result)) return result;
+
+
+	// Create texture
+    D3D11_TEXTURE2D_DESC desc;
+    desc.Width = width;
+    desc.Height = height;
+    desc.MipLevels = 1;
+    desc.ArraySize = 1;
+	desc.Format = format;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    desc.CPUAccessFlags = 0;
+    desc.MiscFlags = 0;
+
+    D3D11_SUBRESOURCE_DATA initData;
+    initData.pSysMem = temp.get();
+    initData.SysMemPitch = static_cast<UINT>( rowPitch );
+    initData.SysMemSlicePitch = static_cast<UINT>( imageSize );
+
+    ID3D11Texture2D* tex = nullptr;
+    result = d3dDevice->CreateTexture2D( &desc, &initData, &tex );
+	if (FAILED(result)) return result;
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC SRVDesc;
+   memset( &SRVDesc, 0, sizeof( SRVDesc ) );
+   SRVDesc.Format = format;
+   SRVDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+   SRVDesc.Texture2D.MipLevels = 1;
+
+   ID3D11ShaderResourceView * newTexture;
+
+   result = d3dDevice->CreateShaderResourceView( tex, &SRVDesc, &newTexture);
+   if (FAILED(result)) return result;
+
+   textures.push_back(newTexture);
+   texture->index = textures.size() - 1;
+
+	if(frame) frame->Release();
+	if(imagingFactory) imagingFactory->Release();
+	if(bitmapDecoder) bitmapDecoder->Release();
+
 	return S_OK;
 }
 
@@ -412,7 +628,23 @@ HRESULT DirectXDevice::LoadVShader(wchar_t* filename, char* entryPoint, SGE::Gra
 	result = d3dDevice->CreateVertexShader( VSBlob->GetBufferPointer(), VSBlob->GetBufferSize(), NULL, &vertexShader );
 	if(FAILED(result)) return result;
 
+		//Define the input layout
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	 {
+        { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12,D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24,D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
+	UINT numElements = ARRAYSIZE( layout );
+
+	//Create the input layout
+	result = d3dDevice->CreateInputLayout( layout, numElements, VSBlob->GetBufferPointer(),
+                                          VSBlob->GetBufferSize(), &inputLayout );
 	VSBlob->Release();
+	if(FAILED(result)) return result;
+
+	//Set the input layout
+	immediateContext->IASetInputLayout(inputLayout);
 
 	vertexShaders.push_back(vertexShader);
 	shader->index = vertexShaders.size() - 1;
@@ -425,34 +657,32 @@ HRESULT DirectXDevice::LoadPShader(wchar_t* filename, char* entryPoint, SGE::Gra
 
 	//Compile the vertex shader
 	ID3DBlob *PSBlob = NULL;
-	HRESULT result = CompileShader( filename, entryPoint, "vs_4_0", &PSBlob );
+	HRESULT result = CompileShader( filename, entryPoint, "ps_4_0", &PSBlob );
 	if(FAILED(result)) return result;
 
-	ID3D11VertexShader *vertexShader;
-	result = d3dDevice->CreateVertexShader( PSBlob->GetBufferPointer(), PSBlob->GetBufferSize(), NULL, &vertexShader );
+	ID3D11PixelShader *pixelShader;
+	result = d3dDevice->CreatePixelShader( PSBlob->GetBufferPointer(), PSBlob->GetBufferSize(), NULL, &pixelShader );
 	if(FAILED(result)) return result;
 
 	PSBlob->Release();
 
-	vertexShaders.push_back(vertexShader);
-	shader->index = vertexShaders.size() - 1;
+	pixelShaders.push_back(pixelShader);
+	shader->index = pixelShaders.size() - 1;
 
 	return S_OK;
 }
 
 HRESULT DirectXDevice::CleanUp(){
 	if(d3dDevice) d3dDevice->Release();
-	d3dDevice = nullptr;
 	if(immediateContext) immediateContext->Release();
-	immediateContext = nullptr;
 	if(swapChain) swapChain->Release();
-	swapChain = nullptr;
 	if(renderTargetView) renderTargetView->Release();
-	renderTargetView = nullptr;
 	if(depthStencil) depthStencil->Release();
-	depthStencil = nullptr;
 	if(depthStencilView) depthStencilView->Release();
-	depthStencilView = nullptr;
+	if(vertexBuffer) vertexBuffer->Release();
+	if(indexBuffer) indexBuffer->Release();
+	if(constantBuffer) constantBuffer->Release();
+	if(samplerLinear) samplerLinear->Release();
 
 	for(UINT i =0; i < vertexShaders.size(); i++){
 		if(vertexShaders[i]) vertexShaders[i]->Release();
@@ -512,6 +742,72 @@ HRESULT DirectXDevice::CompileShader(LPCWSTR srcFile,LPCSTR entryPoint, LPCSTR p
 
     return result;
 
+}
+
+DXGI_FORMAT DirectXDevice::_WICToDXGI( const GUID& guid ){
+	struct WICTranslate
+	{
+		GUID                wic;
+		DXGI_FORMAT         format;
+	};
+
+	WICTranslate g_WICFormats[] = 
+	{
+		{ GUID_WICPixelFormat128bppRGBAFloat,       DXGI_FORMAT_R32G32B32A32_FLOAT },
+
+		{ GUID_WICPixelFormat64bppRGBAHalf,         DXGI_FORMAT_R16G16B16A16_FLOAT },
+		{ GUID_WICPixelFormat64bppRGBA,             DXGI_FORMAT_R16G16B16A16_UNORM },
+
+		{ GUID_WICPixelFormat32bppRGBA,             DXGI_FORMAT_R8G8B8A8_UNORM },
+		{ GUID_WICPixelFormat32bppBGRA,             DXGI_FORMAT_B8G8R8A8_UNORM }, // DXGI 1.1
+		{ GUID_WICPixelFormat32bppBGR,              DXGI_FORMAT_B8G8R8X8_UNORM }, // DXGI 1.1
+
+		{ GUID_WICPixelFormat32bppRGBA1010102XR,    DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM }, // DXGI 1.1
+		{ GUID_WICPixelFormat32bppRGBA1010102,      DXGI_FORMAT_R10G10B10A2_UNORM },
+		{ GUID_WICPixelFormat32bppRGBE,             DXGI_FORMAT_R9G9B9E5_SHAREDEXP },
+
+	#ifdef DXGI_1_2_FORMATS
+
+		{ GUID_WICPixelFormat16bppBGRA5551,         DXGI_FORMAT_B5G5R5A1_UNORM },
+		{ GUID_WICPixelFormat16bppBGR565,           DXGI_FORMAT_B5G6R5_UNORM },
+
+	#endif // DXGI_1_2_FORMATS
+
+		{ GUID_WICPixelFormat32bppGrayFloat,        DXGI_FORMAT_R32_FLOAT },
+		{ GUID_WICPixelFormat16bppGrayHalf,         DXGI_FORMAT_R16_FLOAT },
+		{ GUID_WICPixelFormat16bppGray,             DXGI_FORMAT_R16_UNORM },
+		{ GUID_WICPixelFormat8bppGray,              DXGI_FORMAT_R8_UNORM },
+
+		{ GUID_WICPixelFormat8bppAlpha,             DXGI_FORMAT_A8_UNORM },
+
+	#if (_WIN32_WINNT >= 0x0602 /*_WIN32_WINNT_WIN8*/)
+		{ GUID_WICPixelFormat96bppRGBFloat,         DXGI_FORMAT_R32G32B32_FLOAT },
+	#endif
+	};
+
+
+    for( size_t i=0; i < _countof(g_WICFormats); ++i )
+    {
+        if ( memcmp( &g_WICFormats[i].wic, &guid, sizeof(GUID) ) == 0 )
+            return g_WICFormats[i].format;
+    }
+
+    return DXGI_FORMAT_UNKNOWN;
+}
+
+size_t DirectXDevice::_WICBitsPerPixel( REFGUID targetGuid , IWICImagingFactory *factory){
+
+    IWICComponentInfo *cinfo;
+    IWICPixelFormatInfo *pfinfo;
+	factory->CreateComponentInfo( targetGuid, &cinfo );
+
+    cinfo->QueryInterface( __uuidof(IWICPixelFormatInfo), reinterpret_cast<void**>( &pfinfo )  ) ;
+
+    UINT bpp;
+	pfinfo->GetBitsPerPixel( &bpp ) ;
+
+
+    return bpp;
 }
 
 void SGD3D::DestroyMesh(Mesh* mesh){

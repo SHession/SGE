@@ -48,6 +48,11 @@ HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
 
 	//Initialize game logic
 	LoadContent();
+	result = graphics->ProcessContent();
+	if (FAILED(result)){
+		MessageBox( NULL, L"Process content failed", L"Error", MB_OK );
+        return E_FAIL;
+	}
 	Initialize();
 
 	//Begin game loop

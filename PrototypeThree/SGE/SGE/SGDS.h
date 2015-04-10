@@ -11,9 +11,9 @@ namespace SGDS {
 			__declspec( dllexport ) DirectSoundDevice();
 			__declspec( dllexport ) ~DirectSoundDevice();
 
-			HRESULT InitializeDevice(HWND hWnd);
-			HRESULT LoadWav(char* filename, SGE::Sound::Sound *sound);
-			HRESULT PlaySound(SGE::Sound::Sound *sound);
+			 HRESULT InitializeDevice(HWND hWnd);
+			 HRESULT LoadWav(char* filename, SGE::Sound::Sound *sound);
+		     HRESULT PlaySound(SGE::Sound::Sound *sound);
 
 		private:
 			LPDIRECTSOUND8 lpds;

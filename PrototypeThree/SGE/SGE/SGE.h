@@ -32,6 +32,7 @@ namespace SGE {
 		class GraphicDevice{
 			public:
 				virtual HRESULT InitializeDevice(HWND hWnd) = 0;
+				virtual HRESULT ProcessContent() = 0;
 				virtual HRESULT Draw() = 0;
 				virtual HRESULT DrawMesh(Graphics::Mesh) = 0;
 				virtual HRESULT DrawGameObject(Framework::GameObject) = 0;
@@ -64,7 +65,7 @@ namespace SGE {
 	}
 
 	namespace Input{
-		enum Keys {
+	    enum Keys {
 			A = 0x41, B = 0X42, C = 0X43, D = 0x44, E = 0X45,
 			F = 0x46, G = 0X47, H = 0X48, I = 0x49, J = 0X4A,
 			K = 0x4B, L = 0X4C, M = 0X4D, N = 0x4E, O = 0X4F,
