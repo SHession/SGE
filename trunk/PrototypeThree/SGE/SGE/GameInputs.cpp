@@ -73,6 +73,7 @@ KeyState GameInputs::GetKeyState(Keys key){
 		return (KeyState)state.at(key);
 	}
 	catch(const std::out_of_range& oor){
+		state[key] = 0;
 		return NotKey;
 	}
 

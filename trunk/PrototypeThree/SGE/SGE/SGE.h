@@ -8,8 +8,13 @@
 namespace SGE {
 	//Forward Declertaions
 	namespace Framework {
+		struct GameDescription;
 		class GameObject;
 	}
+
+	struct Vector4{
+		double x, y, z, w;
+	};
 
 	namespace Graphics {
 		struct VertexShader{
@@ -31,11 +36,12 @@ namespace SGE {
 		//Abstract class for a graphics device
 		class GraphicDevice{
 			public:
-				virtual HRESULT InitializeDevice(HWND hWnd) = 0;
+				virtual HRESULT InitializeDevice(Framework::GameDescription *gameDescription, HWND hWnd) = 0;
 				virtual HRESULT ProcessContent() = 0;
+				virtual HRESULT PositionCamera(Vector4 position, Vector4 at) = 0;
 				virtual HRESULT Draw() = 0;
-				virtual HRESULT DrawMesh(Graphics::Mesh) = 0;
-				virtual HRESULT DrawGameObject(Framework::GameObject) = 0;
+				virtual HRESULT DrawMesh(Graphics::Mesh*, SGE::Graphics::Texture* texture, Vector4 position, Vector4 scale, Vector4 rotation) = 0;
+				virtual HRESULT DrawGameObject(Framework::GameObject*) = 0;
 				virtual HRESULT Clear() = 0;
 				virtual HRESULT CleanUp() = 0;
 
@@ -98,6 +104,12 @@ namespace SGE {
 	}
 
 	namespace Framework {
+		struct GameDescription{
+			int width;
+			int height;
+			bool fullscreen;
+		};
+
 		//Tracks the time stats of a game
 		class GameTime{
 			public:
@@ -116,12 +128,41 @@ namespace SGE {
 		class GameObject{
 			public:
 				__declspec( dllexport ) GameObject();
+				__declspec( dllexport ) GameObject(Vector4 position, Vector4 rotation , Vector4 scale , SGE::Graphics::Mesh mesh, SGE::Graphics::Texture texture);
 				__declspec( dllexport ) ~GameObject();
 
 				__declspec( dllexport ) virtual void Update(GameTime gameTime);
+				__declspec( dllexport ) void MoveTo(double x, double y, double z);
+				__declspec( dllexport ) void MoveBy(double x, double y, double z);
+				__declspec( dllexport ) void RotateTo(double x, double y, double z);
+				__declspec( dllexport ) void RotateBy(double x, double y, double z);
+				__declspec( dllexport ) void ScaleTo(double x, double y, double z);
+				__declspec( dllexport ) void ScaleBy(double x, double y, double z);
+				__declspec( dllexport ) void MoveForwardBy(double distance);
+
+				Vector4 Position() const {return position;}
+				Vector4 Rotation() const {return rotation;}
+				Vector4 Scale() const {return scale;}
+
+				SGE::Graphics::Mesh Mesh() const{ return _mesh;}
+				void Mesh(SGE::Graphics::Mesh mesh) {_mesh = mesh;}
+
+				SGE::Graphics::Texture Texture() const{ return _texture;}
+				void Texture(SGE::Graphics::Texture texture) {_texture = texture;}
+
 			private:
+				Vector4 position;
+				Vector4 rotation;
+				Vector4 scale;
+
+				Vector4 initialRotation;
+				Vector4 currentRotation;
+
+				SGE::Graphics::Mesh _mesh;
+				SGE::Graphics::Texture _texture;
 
 			protected:
+
 
 		};
 
@@ -130,13 +171,14 @@ namespace SGE {
 			public:
 				__declspec( dllexport ) Game();
 				__declspec( dllexport ) ~Game();
-				__declspec( dllexport ) HRESULT Run(HINSTANCE hInstance, int nCmdShow);
+				__declspec( dllexport ) HRESULT Run(GameDescription* gameDescription, HINSTANCE hInstance, int nCmdShow);
 			private:
 				HINSTANCE						hInst;
 				HWND							mainWnd;
 				GameTime						gameTime;
+				bool							gameLoop;
 
-				HRESULT InitializeWindow(HINSTANCE hInstance, int nCmdShow);
+				HRESULT InitializeWindow(GameDescription* gameDescription, HINSTANCE hInstance, int nCmdShow);
 				static HRESULT CALLBACK    WndProc( HWND, UINT, WPARAM, LPARAM );
 			protected:
 				Graphics::GraphicDevice *		graphics;
@@ -148,6 +190,9 @@ namespace SGE {
 				__declspec( dllexport ) virtual void Update(GameTime gameTime);
 				__declspec( dllexport ) virtual void Draw();
 				__declspec( dllexport ) virtual void CleanUp();
+
+				__declspec( dllexport ) virtual void Exit();
+				__declspec( dllexport ) virtual void Restart();
 		};
 	}
 }
