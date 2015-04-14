@@ -34,8 +34,8 @@ namespace SGD3D {
 	};
 
 	struct CB_VS_PER_OBJECT{
-		DirectX::XMMATRIX gWorld;
-		DirectX::XMMATRIX gWorldViewProj;
+		DirectX::XMMATRIX world;
+		DirectX::XMMATRIX worldViewProj;
 	};
 
 	void DestroyMesh(Mesh *mesh);
@@ -45,11 +45,12 @@ namespace SGD3D {
 			__declspec( dllexport ) DirectXDevice();
 			__declspec( dllexport ) ~DirectXDevice();
 
-			 HRESULT InitializeDevice(HWND hWnd);
+			 HRESULT InitializeDevice(SGE::Framework::GameDescription *gameDescription, HWND hWnd);
 			 HRESULT ProcessContent();
+			 HRESULT PositionCamera(SGE::Vector4 position, SGE::Vector4 at);
 			 HRESULT Draw();
-			 HRESULT DrawMesh(SGE::Graphics::Mesh);
-			 HRESULT DrawGameObject(SGE::Framework::GameObject);
+			 HRESULT DrawMesh(SGE::Graphics::Mesh*, SGE::Graphics::Texture* texture, SGE::Vector4 position, SGE::Vector4 scale, SGE::Vector4 rotation);
+			 HRESULT DrawGameObject(SGE::Framework::GameObject*);
 			 HRESULT Clear();
 
 			 HRESULT LoadObj(wchar_t * filename, SGE::Graphics::Mesh* mesh);				
@@ -78,6 +79,9 @@ namespace SGD3D {
 			std::vector<ID3D11PixelShader*> pixelShaders;
 			std::vector<ID3D11ShaderResourceView*> textures;
 			std::vector<Mesh*> meshes;
+
+			DirectX::XMFLOAT4X4 camera;
+			DirectX::XMFLOAT4X4 projection;
 
 			HRESULT CleanUp();
 			HRESULT CompileShader(LPCWSTR srcFile,LPCSTR entryPoint, LPCSTR profile, ID3DBlob** blob );

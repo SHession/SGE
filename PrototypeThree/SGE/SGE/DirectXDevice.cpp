@@ -25,7 +25,7 @@ DirectXDevice::~DirectXDevice(){
 	CleanUp();
 }
 
-HRESULT DirectXDevice::InitializeDevice(HWND hWnd){
+HRESULT DirectXDevice::InitializeDevice(SGE::Framework::GameDescription *gameDescription, HWND hWnd){
 	//Create a rect for the viewport based on the window size
 	RECT rc;
 	GetClientRect( hWnd, &rc );
@@ -55,13 +55,15 @@ HRESULT DirectXDevice::InitializeDevice(HWND hWnd){
 	sd.OutputWindow = hWnd;
 	sd.Windowed = true;
 	sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-	sd.Flags = 0;
+	sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	//create swap chain/ context and view
 	HRESULT result = D3D11CreateDeviceAndSwapChain(0, D3D_DRIVER_TYPE_HARDWARE, 0, createDeviceFlags, 0, 0,D3D11_SDK_VERSION, &sd, &swapChain
 												,&d3dDevice, &featureLevel, &immediateContext);
-
 	if (FAILED(result)) return result;
+
+	if(gameDescription)
+		swapChain->SetFullscreenState(gameDescription->fullscreen, NULL);  
 
 	//Add a render target view to the swap chain
 	ID3D11Texture2D *BackBuffer = NULL;
@@ -141,9 +143,9 @@ HRESULT DirectXDevice::InitializeDevice(HWND hWnd){
 	float ClearColor[4] = { 0, 0, 0, 0 }; //red,green,blue,alpha
     immediateContext->ClearRenderTargetView( renderTargetView, ClearColor );
 	immediateContext->ClearDepthStencilView( depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
-
-
 	result = swapChain->Present( 1, 0 );
+
+	XMStoreFloat4x4(&projection,DirectX::XMMatrixPerspectiveFovLH( DirectX::XM_PIDIV2, width / (FLOAT)height, 0.01f, 1000.0f ));
 
 	return S_OK;
 }
@@ -167,7 +169,9 @@ HRESULT DirectXDevice::ProcessContent(){
 	vertices = new Vertex[totalVertices];
 	indices = new WORD[totalIndices];
 
+
 	for(UINT i=0; i < meshes.size(); i++){
+
 		for(UINT j = 0; j < meshes[i]->numOfVertices; j++){
 			vertices[j + numOfVertices] = meshes[i]->vertices[j];
 		}
@@ -226,20 +230,29 @@ HRESULT DirectXDevice::ProcessContent(){
 	if(vertices) delete vertices;
 	if(indices) delete indices;
 
-	if(vertexShaders[0])
+	if(vertexShaders.size() > 0)
 		immediateContext->VSSetShader( vertexShaders[0], NULL, 0 );
 	else 
 		return E_FAIL;
-	if(pixelShaders[0])
+	if(pixelShaders.size() > 0)
 		immediateContext->PSSetShader( pixelShaders[0], NULL, 0 );
 	else 
 		return E_FAIL;
-
 	if(samplerLinear)
 		immediateContext->PSSetSamplers(0,1,&samplerLinear);
 	else 
 		return E_FAIL;
 
+
+	return S_OK;
+}
+
+HRESULT DirectXDevice::PositionCamera(SGE::Vector4 position, SGE::Vector4 at) {
+	using namespace DirectX;
+	XMVECTOR Eye = XMVectorSet( (float)position.x, (float)position.y, (float)position.z, 0.0f );
+	XMVECTOR At = XMVectorSet((float)at.x, (float)at.y, (float)at.z, 0.0f );
+	XMVECTOR Up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
+	 XMStoreFloat4x4(&camera,XMMatrixLookAtLH( Eye, At, Up ));
 
 	return S_OK;
 }
@@ -251,14 +264,57 @@ HRESULT DirectXDevice::Draw(){
 	return S_OK;
 }
 
-HRESULT DirectXDevice::DrawMesh(SGE::Graphics::Mesh mesh){
+HRESULT DirectXDevice::DrawMesh(SGE::Graphics::Mesh* mesh, SGE::Graphics::Texture* texture, SGE::Vector4 position, SGE::Vector4 scale, SGE::Vector4 rotation){
+	using namespace DirectX;
+
+	XMMATRIX world = XMMatrixScaling(scale.x, scale.y, scale.z) * XMMatrixRotationRollPitchYaw(rotation.x, rotation.y, rotation.z) * 
+		XMMatrixTranslation(position.x, position.y, position.z);
+
+	if(mesh->index != -1){
+		CB_VS_PER_OBJECT cb;
+		cb.world = XMMatrixTranspose(world);
+		cb.worldViewProj = XMMatrixTranspose(world * XMLoadFloat4x4(&camera) * XMLoadFloat4x4(&projection));
+		immediateContext->UpdateSubresource(constantBuffer,0,NULL,&cb,0,0);
+		immediateContext->VSSetConstantBuffers( 0, 1, &constantBuffer );
+
+		if(texture->index != -1)
+			immediateContext->PSSetShaderResources( 0, 1, &textures[texture->index] );
+
+		immediateContext->DrawIndexed(meshes[mesh->index]->numOfIndices,meshes[mesh->index]->startIndex,meshes[mesh->index]->startVertex);
+	}
+	else 
+		return E_FAIL;
 
 	return S_OK;
 }
 
-HRESULT DirectXDevice::DrawGameObject(SGE::Framework::GameObject){
+HRESULT DirectXDevice::DrawGameObject(SGE::Framework::GameObject* gameObject){
+	using namespace DirectX;
+	
+	if(!gameObject)
+		return E_FAIL;
+
+	XMMATRIX world = XMMatrixScaling(gameObject->Scale().x, gameObject->Scale().y, gameObject->Scale().z) 
+		* XMMatrixRotationRollPitchYaw(gameObject->Rotation().x, gameObject->Rotation().y, gameObject->Rotation().z) 
+		* XMMatrixTranslation(gameObject->Position().x, gameObject->Position().y, gameObject->Position().z);
+
+	if(gameObject->Mesh().index != -1){
+		CB_VS_PER_OBJECT cb;
+		cb.world = XMMatrixTranspose(world);
+		cb.worldViewProj = XMMatrixTranspose(world * XMLoadFloat4x4(&camera) * XMLoadFloat4x4(&projection));
+		immediateContext->UpdateSubresource(constantBuffer,0,NULL,&cb,0,0);
+		immediateContext->VSSetConstantBuffers( 0, 1, &constantBuffer );
+
+		if(gameObject->Texture().index != -1)
+			immediateContext->PSSetShaderResources( 0, 1, &textures[gameObject->Texture().index] );
+
+		immediateContext->DrawIndexed(meshes[gameObject->Mesh().index]->numOfIndices,meshes[gameObject->Mesh().index]->startIndex,meshes[gameObject->Mesh().index]->startVertex);
+	}
+	else 
+		return E_FAIL;
 
 	return S_OK;
+
 }
 
 HRESULT DirectXDevice::Clear(){
@@ -673,6 +729,8 @@ HRESULT DirectXDevice::LoadPShader(wchar_t* filename, char* entryPoint, SGE::Gra
 }
 
 HRESULT DirectXDevice::CleanUp(){
+	swapChain->SetFullscreenState(FALSE, NULL);  
+
 	if(d3dDevice) d3dDevice->Release();
 	if(immediateContext) immediateContext->Release();
 	if(swapChain) swapChain->Release();

@@ -13,12 +13,12 @@ Game::~Game(){
 	
 }
 
-HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
+HRESULT Game::Run(GameDescription *gameDescription,HINSTANCE hInstance, int nCmdShow){
 
 	HRESULT result;
 
 	//Initialize the game
-	result = InitializeWindow(hInstance, nCmdShow);
+	result = InitializeWindow(gameDescription, hInstance, nCmdShow);
 	if (FAILED(result)){
 		MessageBox( NULL, L"Window Initialize Failed", L"Error", MB_OK );
         return E_FAIL;
@@ -29,7 +29,7 @@ HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
 		MessageBox( NULL, L"No Graphics Device Assigned", L"Error", MB_OK );
         return E_FAIL;
 	}
-	result = graphics->InitializeDevice(mainWnd);
+	result = graphics->InitializeDevice(gameDescription,mainWnd);
 	if (FAILED(result)){
 		MessageBox( NULL, L"Graphics Initialize Failed", L"Error", MB_OK );
         return E_FAIL;
@@ -55,9 +55,11 @@ HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
 	}
 	Initialize();
 
+	gameLoop = true;
+
 	//Begin game loop
 	MSG msg = {0};
-    while( WM_QUIT != msg.message )
+	while( WM_QUIT != msg.message && gameLoop)
     {
         if( PeekMessage( &msg, NULL, 0, 0, PM_REMOVE ) )
         {
@@ -81,7 +83,7 @@ HRESULT Game::Run(HINSTANCE hInstance, int nCmdShow){
 	return S_OK;
 }
 
-HRESULT Game::InitializeWindow(HINSTANCE hInstance, int nCmdShow){
+HRESULT Game::InitializeWindow(GameDescription *gameDescription, HINSTANCE hInstance, int nCmdShow){
 	WNDCLASSEX wcex;
 	wcex.cbSize = sizeof( WNDCLASSEX );
 	wcex.style = CS_OWNDC;
@@ -91,7 +93,7 @@ HRESULT Game::InitializeWindow(HINSTANCE hInstance, int nCmdShow){
 	wcex.hInstance = hInstance;
 	wcex.hIcon = NULL;
     wcex.hCursor = LoadCursor( NULL, IDC_ARROW );
-    wcex.hbrBackground = ( HBRUSH )( COLOR_WINDOW + 1 );
+	wcex.hbrBackground = ( HBRUSH )( COLOR_WINDOW + 1);
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = L"SGE";
     wcex.hIconSm = NULL;
@@ -99,7 +101,14 @@ HRESULT Game::InitializeWindow(HINSTANCE hInstance, int nCmdShow){
         return E_FAIL;
 
 	hInst = hInstance;
-	RECT rc = {0,0,640,480};
+
+	RECT rc = {0,0,640, 480};
+
+	if(gameDescription){
+		rc.bottom = gameDescription->height;
+		rc.right = gameDescription->width;
+	}
+
 	AdjustWindowRect( &rc, WS_OVERLAPPEDWINDOW, FALSE );
 	mainWnd = CreateWindow( L"SGE", L"SGETTest", WS_OVERLAPPEDWINDOW,
                            CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, NULL, NULL, hInstance,
@@ -158,4 +167,10 @@ void Game::CleanUp(){
 	if(sound) sound->CleanUp();
 }
 
+void Game::Exit(){
+	gameLoop = false;
+}
 
+void Game::Restart(){
+	Initialize();
+}
