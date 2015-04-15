@@ -6,7 +6,7 @@ using namespace SGE::Framework;
 
 Game::Game(){
 	graphics = NULL;
-	sound = NULL;
+	audio = NULL;
 }
 
 Game::~Game(){
@@ -36,11 +36,11 @@ HRESULT Game::Run(GameDescription *gameDescription,HINSTANCE hInstance, int nCmd
 	}
 
 	//Check sound device is assigned
-	if(!sound) {
+	if(!audio) {
 		MessageBox( NULL, L"No Sound Device Assigned", L"Error", MB_OK );
         return E_FAIL;
 	}
-	result = sound->InitializeDevice(mainWnd);
+	result = audio->InitializeDevice(mainWnd);
 	if (FAILED(result)){
 		MessageBox( NULL, L"Sound Initialize Failed", L"Error", MB_OK );
         return E_FAIL;
@@ -164,7 +164,7 @@ void Game::Draw(){
 
 void Game::CleanUp(){
 	if(graphics) graphics->CleanUp();
-	if(sound) sound->CleanUp();
+	if(audio) audio->CleanUp();
 }
 
 void Game::Exit(){

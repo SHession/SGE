@@ -11,6 +11,8 @@ DirectXDevice::DirectXDevice(){
 	swapChain = NULL;
 	renderTargetView = NULL;
 	depthStencil = NULL;
+	depthStencilState = NULL;
+	disabledDepthStencilState = NULL;
 	depthStencilView = NULL;
 	vertexBuffer = NULL;
 	indexBuffer = NULL;
@@ -92,6 +94,39 @@ HRESULT DirectXDevice::InitializeDevice(SGE::Framework::GameDescription *gameDes
     result = d3dDevice->CreateTexture2D( &descDepth, NULL, &depthStencil );
     if( FAILED( result ) ) return result;
 
+	//Depth Stencil State
+	D3D11_DEPTH_STENCIL_DESC depthStencilDesc;
+	depthStencilDesc.DepthEnable = true;
+	depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+	depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	depthStencilDesc.StencilEnable = true;
+	depthStencilDesc.StencilReadMask = 0xFF;
+	depthStencilDesc.StencilWriteMask = 0xFF;
+	depthStencilDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	depthStencilDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	depthStencilDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+
+	result = d3dDevice->CreateDepthStencilState(&depthStencilDesc, &depthStencilState);
+	if(FAILED(result))
+	{
+		return false;
+	}
+
+	depthStencilDesc.DepthEnable = false;
+
+	result = d3dDevice->CreateDepthStencilState(&depthStencilDesc, &disabledDepthStencilState);
+	if(FAILED(result))
+	{
+		return false;
+	}
+
+	immediateContext->OMSetDepthStencilState(depthStencilState,1);
+
 	//Create depth stencil view 
 	D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
 	ZeroMemory( &descDSV, sizeof(descDSV) );
@@ -146,6 +181,7 @@ HRESULT DirectXDevice::InitializeDevice(SGE::Framework::GameDescription *gameDes
 	result = swapChain->Present( 1, 0 );
 
 	XMStoreFloat4x4(&projection,DirectX::XMMatrixPerspectiveFovLH( DirectX::XM_PIDIV2, width / (FLOAT)height, 0.01f, 1000.0f ));
+	//XMStoreFloat4x4(&projection,(DirectX::XMMatrixOrthographicLH((float)width, (float)height, 0.01f, 1000.0f)));
 
 	return S_OK;
 }
@@ -252,8 +288,8 @@ HRESULT DirectXDevice::PositionCamera(SGE::Vector4 position, SGE::Vector4 at) {
 	XMVECTOR Eye = XMVectorSet( (float)position.x, (float)position.y, (float)position.z, 0.0f );
 	XMVECTOR At = XMVectorSet((float)at.x, (float)at.y, (float)at.z, 0.0f );
 	XMVECTOR Up = XMVectorSet( 0.0f, 1.0f, 0.0f, 0.0f );
-	 XMStoreFloat4x4(&camera,XMMatrixLookAtLH( Eye, At, Up ));
-
+	XMStoreFloat4x4(&camera,XMMatrixLookAtLH( Eye, At, Up ));
+	
 	return S_OK;
 }
 
@@ -736,6 +772,8 @@ HRESULT DirectXDevice::CleanUp(){
 	if(swapChain) swapChain->Release();
 	if(renderTargetView) renderTargetView->Release();
 	if(depthStencil) depthStencil->Release();
+	if(depthStencilState) depthStencilState->Release();
+	if(disabledDepthStencilState) disabledDepthStencilState->Release();
 	if(depthStencilView) depthStencilView->Release();
 	if(vertexBuffer) vertexBuffer->Release();
 	if(indexBuffer) indexBuffer->Release();
