@@ -13,7 +13,9 @@ namespace SGDS {
 
 			 HRESULT InitializeDevice(HWND hWnd);
 			 HRESULT LoadWav(char* filename, SGE::Sound::Sound *sound);
-		     HRESULT PlaySound(SGE::Sound::Sound *sound);
+		     HRESULT Play(SGE::Sound::Sound *sound);
+			 HRESULT Loop(SGE::Sound::Sound *sound);
+			 HRESULT Stop(SGE::Sound::Sound *sound);
 
 		private:
 			LPDIRECTSOUND8 lpds;

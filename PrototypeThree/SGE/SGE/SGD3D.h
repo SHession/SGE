@@ -66,6 +66,8 @@ namespace SGD3D {
 			IDXGISwapChain*         swapChain;
 			ID3D11RenderTargetView* renderTargetView;
 			ID3D11Texture2D*		depthStencil;
+			ID3D11DepthStencilState*depthStencilState;
+			ID3D11DepthStencilState*disabledDepthStencilState;
 			ID3D11DepthStencilView*	depthStencilView;
 			ID3D11InputLayout*      inputLayout;
 			ID3D11Buffer*           vertexBuffer;

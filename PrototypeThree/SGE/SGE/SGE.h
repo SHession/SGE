@@ -14,6 +14,16 @@ namespace SGE {
 
 	struct Vector4{
 		double x, y, z, w;
+
+		Vector4(){
+			x = 0; y =0; z= 0; w= 1;
+		};
+		Vector4(double X, double Y, double Z, double W){
+			x = X; y =Y; z= Z; w= W;
+		};
+		Vector4(double X, double Y, double Z){
+			x = X; y =Y; z= Z; w= 0;
+		};
 	};
 
 	namespace Graphics {
@@ -64,7 +74,9 @@ namespace SGE {
 			public:
 				virtual HRESULT InitializeDevice(HWND hWnd) = 0;
 				virtual HRESULT LoadWav(char* filename, Sound *sound) = 0;
-				virtual HRESULT PlaySound(Sound *sound) = 0;
+				virtual HRESULT Play(Sound *sound) = 0;
+				virtual HRESULT Loop(Sound *sound) = 0;
+				virtual HRESULT Stop(Sound *sound) = 0;
 				virtual HRESULT CleanUp() = 0;
 		};
 
@@ -182,7 +194,7 @@ namespace SGE {
 				static HRESULT CALLBACK    WndProc( HWND, UINT, WPARAM, LPARAM );
 			protected:
 				Graphics::GraphicDevice *		graphics;
-				Sound::SoundDevice *			sound;
+				Sound::SoundDevice *			audio;
 				Input::GameInputs				inputs;
 
 				__declspec( dllexport ) virtual void LoadContent();
