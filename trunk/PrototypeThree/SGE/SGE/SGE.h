@@ -35,6 +35,10 @@ namespace SGE {
 			int index;
 		};
 
+		struct ConstantBuffer{
+			int index;
+		};
+
 		struct Mesh{
 			int index;
 		};
@@ -42,6 +46,8 @@ namespace SGE {
 		struct Texture{
 			int index;
 		};
+
+		struct CB{};
 
 		//Abstract class for a graphics device
 		class GraphicDevice{
@@ -60,6 +66,9 @@ namespace SGE {
 				virtual HRESULT LoadTexture(wchar_t* filename, Texture* texture) = 0;
 				virtual HRESULT LoadVShader(wchar_t* filename, char* entryPoint, VertexShader *shader) = 0;
 				virtual HRESULT LoadPShader(wchar_t* filename, char* entryPoint, PixelShader *shader) = 0;
+
+				virtual HRESULT CreateConstantBuffer(size_t byteWidth , ConstantBuffer *buffer) = 0;
+				virtual HRESULT UpdateConstantBuffer(CB * data, ConstantBuffer *buffer) = 0;
 		};
 	}
 
@@ -195,7 +204,7 @@ namespace SGE {
 			protected:
 				Graphics::GraphicDevice *		graphics;
 				Sound::SoundDevice *			audio;
-				Input::GameInputs				inputs;
+				Input::GameInputs				input;
 
 				__declspec( dllexport ) virtual void LoadContent();
 				__declspec( dllexport ) virtual void Initialize();
