@@ -764,6 +764,38 @@ HRESULT DirectXDevice::LoadPShader(wchar_t* filename, char* entryPoint, SGE::Gra
 	return S_OK;
 }
 
+HRESULT DirectXDevice::CreateConstantBuffer(size_t byteWidth, SGE::Graphics::ConstantBuffer *buffer){
+
+	ID3D11Buffer* tempConstantBuffer;
+	buffer->index = -1;
+
+	D3D11_BUFFER_DESC bd;
+	SecureZeroMemory(&bd, sizeof(bd));
+	bd.ByteWidth = byteWidth;
+	bd.Usage = D3D11_USAGE_DEFAULT;
+	bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	bd.CPUAccessFlags = 0;
+
+	HRESULT result = d3dDevice->CreateBuffer(&bd, NULL, &tempConstantBuffer);
+	if(FAILED(result)) return result;
+
+	constantBuffers.push_back(tempConstantBuffer);
+	buffer->index = constantBuffers.size() - 1;
+
+	return S_OK;
+}
+
+HRESULT DirectXDevice::UpdateConstantBuffer(SGE::Graphics::CB * data, SGE::Graphics::ConstantBuffer *buffer){
+
+	if(buffer->index == -1)
+		return E_FAIL;
+
+	immediateContext->UpdateSubresource(constantBuffers[buffer->index],0,NULL,data,0,0);
+	immediateContext->VSSetConstantBuffers( buffer->index + 1, 1, &constantBuffers[buffer->index] );
+
+	return S_OK;
+}
+
 HRESULT DirectXDevice::CleanUp(){
 	swapChain->SetFullscreenState(FALSE, NULL);  
 
@@ -785,6 +817,9 @@ HRESULT DirectXDevice::CleanUp(){
 	}
 	for(UINT i =0; i < pixelShaders.size(); i++){
 		if(pixelShaders[i]) pixelShaders[i]->Release();
+	}
+	for(UINT i =0; i < constantBuffers.size(); i++){
+		if(constantBuffers[i]) constantBuffers[i]->Release();
 	}
 	for(UINT i =0; i < textures.size(); i++){
 		if(textures[i]) textures[i]->Release();

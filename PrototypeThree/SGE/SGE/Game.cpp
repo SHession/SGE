@@ -68,7 +68,7 @@ HRESULT Game::Run(GameDescription *gameDescription,HINSTANCE hInstance, int nCmd
 
 		   if(msg.message == WM_KEYDOWN || msg.message == WM_KEYUP || msg.message == WM_CHAR)
 		   {
-			   inputs.HandleInput(msg);
+			   input.HandleInput(msg);
 		   }
         }
 
@@ -76,7 +76,7 @@ HRESULT Game::Run(GameDescription *gameDescription,HINSTANCE hInstance, int nCmd
 		Update(gameTime);
 		Draw();		
 		gameTime.Update();
-		inputs.Update();
+		input.Update();
     }
 	CleanUp();
 

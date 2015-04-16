@@ -58,6 +58,9 @@ namespace SGD3D {
 			 HRESULT LoadVShader(wchar_t* filename, char* entryPoint, SGE::Graphics::VertexShader *shader);
 			 HRESULT LoadPShader(wchar_t* filename, char* entryPoint, SGE::Graphics::PixelShader *shader);
 
+			 HRESULT CreateConstantBuffer(size_t byteWidth, SGE::Graphics::ConstantBuffer *buffer);
+			 HRESULT UpdateConstantBuffer(SGE::Graphics::CB * data, SGE::Graphics::ConstantBuffer *buffer );
+
 		private:
 			D3D_DRIVER_TYPE         driverType;
 			D3D_FEATURE_LEVEL       featureLevel;
@@ -79,6 +82,7 @@ namespace SGD3D {
 
 			std::vector<ID3D11VertexShader*> vertexShaders;
 			std::vector<ID3D11PixelShader*> pixelShaders;
+			std::vector<ID3D11Buffer*> constantBuffers;
 			std::vector<ID3D11ShaderResourceView*> textures;
 			std::vector<Mesh*> meshes;
 
