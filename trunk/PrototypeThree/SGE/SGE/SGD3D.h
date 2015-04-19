@@ -52,6 +52,7 @@ namespace SGD3D {
 			 HRESULT DrawMesh(SGE::Graphics::Mesh*, SGE::Graphics::Texture* texture, SGE::Vector4 position, SGE::Vector4 scale, SGE::Vector4 rotation);
 			 HRESULT DrawGameObject(SGE::Framework::GameObject*);
 			 HRESULT Clear();
+			 HRESULT Clear(float[4]);
 
 			 HRESULT LoadObj(wchar_t * filename, SGE::Graphics::Mesh* mesh);				
 		     HRESULT LoadTexture(wchar_t* filename, SGE::Graphics::Texture* texture);
