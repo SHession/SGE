@@ -67,6 +67,9 @@ namespace SGE {
 				virtual HRESULT LoadVShader(wchar_t* filename, char* entryPoint, VertexShader *shader) = 0;
 				virtual HRESULT LoadPShader(wchar_t* filename, char* entryPoint, PixelShader *shader) = 0;
 
+				virtual HRESULT SetVShader(VertexShader *shader) = 0;
+				virtual HRESULT SetPShader(PixelShader *shader) = 0;
+
 				virtual HRESULT CreateConstantBuffer(size_t byteWidth , ConstantBuffer *buffer) = 0;
 				virtual HRESULT UpdateConstantBuffer(CB * data, ConstantBuffer *buffer) = 0;
 		};

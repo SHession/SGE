@@ -764,6 +764,25 @@ HRESULT DirectXDevice::LoadPShader(wchar_t* filename, char* entryPoint, SGE::Gra
 	return S_OK;
 }
 
+HRESULT DirectXDevice::SetVShader(SGE::Graphics::VertexShader *shader){
+	if(shader->index != -1)
+		immediateContext->VSSetShader( vertexShaders[shader->index], NULL, 0 );
+	else 
+		return E_FAIL;
+
+	return S_OK;
+
+}
+
+HRESULT DirectXDevice::SetPShader(SGE::Graphics::PixelShader *shader){
+	if(shader->index != -1)
+		immediateContext->PSSetShader( pixelShaders[shader->index], NULL, 0 );
+	else 
+		return E_FAIL;
+
+	return S_OK;
+}
+
 HRESULT DirectXDevice::CreateConstantBuffer(size_t byteWidth, SGE::Graphics::ConstantBuffer *buffer){
 
 	ID3D11Buffer* tempConstantBuffer;

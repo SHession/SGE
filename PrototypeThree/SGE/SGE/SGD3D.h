@@ -58,6 +58,9 @@ namespace SGD3D {
 			 HRESULT LoadVShader(wchar_t* filename, char* entryPoint, SGE::Graphics::VertexShader *shader);
 			 HRESULT LoadPShader(wchar_t* filename, char* entryPoint, SGE::Graphics::PixelShader *shader);
 
+			 HRESULT SetVShader(SGE::Graphics::VertexShader *shader);
+			 HRESULT SetPShader(SGE::Graphics::PixelShader *shader);
+
 			 HRESULT CreateConstantBuffer(size_t byteWidth, SGE::Graphics::ConstantBuffer *buffer);
 			 HRESULT UpdateConstantBuffer(SGE::Graphics::CB * data, SGE::Graphics::ConstantBuffer *buffer );
 
