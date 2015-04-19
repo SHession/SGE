@@ -318,7 +318,7 @@ HRESULT DirectXDevice::DrawMesh(SGE::Graphics::Mesh* mesh, SGE::Graphics::Textur
 		immediateContext->UpdateSubresource(constantBuffer,0,NULL,&cb,0,0);
 		immediateContext->VSSetConstantBuffers( 0, 1, &constantBuffer );
 
-		if(texture->index != -1)
+		if(texture && texture->index != -1)
 			immediateContext->PSSetShaderResources( 0, 1, &textures[texture->index] );
 
 		immediateContext->DrawIndexed(meshes[mesh->index]->numOfIndices,meshes[mesh->index]->startIndex,meshes[mesh->index]->startVertex);
