@@ -59,6 +59,7 @@ namespace SGE {
 				virtual HRESULT DrawMesh(Graphics::Mesh*, SGE::Graphics::Texture* texture, Vector4 position, Vector4 scale, Vector4 rotation) = 0;
 				virtual HRESULT DrawGameObject(Framework::GameObject*) = 0;
 				virtual HRESULT Clear() = 0;
+				virtual HRESULT Clear(float[4]) = 0;
 				virtual HRESULT CleanUp() = 0;
 
 				

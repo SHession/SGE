@@ -188,83 +188,88 @@ HRESULT DirectXDevice::InitializeDevice(SGE::Framework::GameDescription *gameDes
 
 HRESULT DirectXDevice::ProcessContent(){
 
-	Vertex *vertices;
-	WORD * indices;
 
-	int numOfVertices = 0;
-	int numOfIndices = 0;
+	if(meshes.size() > 0){
+		Vertex *vertices;
+		WORD * indices;
 
-	int totalVertices = 0;
-	int totalIndices = 0;
+		int numOfVertices = 0;
+		int numOfIndices = 0;
 
-	for(UINT i=0; i < meshes.size(); i++){
-		totalVertices += meshes[i]->numOfVertices;
-		totalIndices += meshes[i]->numOfIndices;
-	}
+		int totalVertices = 0;
+		int totalIndices = 0;
 
-	vertices = new Vertex[totalVertices];
-	indices = new WORD[totalIndices];
-
-
-	for(UINT i=0; i < meshes.size(); i++){
-
-		for(UINT j = 0; j < meshes[i]->numOfVertices; j++){
-			vertices[j + numOfVertices] = meshes[i]->vertices[j];
+		for(UINT i=0; i < meshes.size(); i++){
+			totalVertices += meshes[i]->numOfVertices;
+			totalIndices += meshes[i]->numOfIndices;
 		}
-		meshes[i]->startVertex = numOfVertices;
-		numOfVertices += meshes[i]->numOfVertices;
+
+		vertices = new Vertex[totalVertices];
+		indices = new WORD[totalIndices];
+
+
+		for(UINT i=0; i < meshes.size(); i++){
+
+			for(UINT j = 0; j < meshes[i]->numOfVertices; j++){
+				vertices[j + numOfVertices] = meshes[i]->vertices[j];
+			}
+			meshes[i]->startVertex = numOfVertices;
+			numOfVertices += meshes[i]->numOfVertices;
 		
-		for(UINT j = 0; j < meshes[i]->numOfIndices; j++){
-			indices[j + numOfIndices] = meshes[i]->indices[j];
+			for(UINT j = 0; j < meshes[i]->numOfIndices; j++){
+				indices[j + numOfIndices] = meshes[i]->indices[j];
+			}
+
+			meshes[i]->startIndex = numOfIndices;
+			numOfIndices += meshes[i]->numOfIndices;
 		}
 
-		meshes[i]->startIndex = numOfIndices;
-		numOfIndices += meshes[i]->numOfIndices;
+
+		HRESULT result;
+
+		//Create a vertex buffer
+		D3D11_BUFFER_DESC bd;
+		SecureZeroMemory(&bd, sizeof(bd));
+		bd.ByteWidth = sizeof(Vertex) * numOfVertices;
+		bd.Usage = D3D11_USAGE_DEFAULT;
+		bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+
+
+		D3D11_SUBRESOURCE_DATA InitData;
+		ZeroMemory(&InitData, sizeof(InitData));
+		InitData.pSysMem = vertices;
+		result =  d3dDevice->CreateBuffer(&bd, &InitData, &vertexBuffer);
+		if(FAILED(result)) return result;
+
+		//Set vertex buffer
+		UINT stride = sizeof(Vertex);
+		UINT offset = 0;
+		immediateContext->IASetVertexBuffers(0,1, &vertexBuffer, &stride, &offset);
+
+
+		//Create an index buffer
+		SecureZeroMemory(&bd, sizeof(bd));
+		bd.ByteWidth = sizeof(WORD) * numOfIndices;
+		bd.Usage = D3D11_USAGE_DEFAULT;
+		bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bd.CPUAccessFlags = 0;
+
+		InitData.pSysMem = indices;
+		result = d3dDevice->CreateBuffer( &bd, &InitData, &indexBuffer );
+		if(FAILED(result)) return result;
+
+		// Set index buffer
+		immediateContext->IASetIndexBuffer( indexBuffer, DXGI_FORMAT_R16_UINT, 0 );
+
+		if(vertices) delete vertices;
+		if(indices) delete indices;
 	}
-
-
-	HRESULT result;
-
-	//Create a vertex buffer
-	D3D11_BUFFER_DESC bd;
-	SecureZeroMemory(&bd, sizeof(bd));
-	bd.ByteWidth = sizeof(Vertex) * numOfVertices;
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	bd.CPUAccessFlags = 0;
-
-
-	D3D11_SUBRESOURCE_DATA InitData;
-	ZeroMemory(&InitData, sizeof(InitData));
-	InitData.pSysMem = vertices;
-	result =  d3dDevice->CreateBuffer(&bd, &InitData, &vertexBuffer);
-	if(FAILED(result)) return result;
-
-	//Set vertex buffer
-	UINT stride = sizeof(Vertex);
-	UINT offset = 0;
-	immediateContext->IASetVertexBuffers(0,1, &vertexBuffer, &stride, &offset);
-
-
-	//Create an index buffer
-	SecureZeroMemory(&bd, sizeof(bd));
-	bd.ByteWidth = sizeof(WORD) * numOfIndices;
-	bd.Usage = D3D11_USAGE_DEFAULT;
-	bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	bd.CPUAccessFlags = 0;
-
-	InitData.pSysMem = indices;
-    result = d3dDevice->CreateBuffer( &bd, &InitData, &indexBuffer );
-	if(FAILED(result)) return result;
-
-	// Set index buffer
-    immediateContext->IASetIndexBuffer( indexBuffer, DXGI_FORMAT_R16_UINT, 0 );
 
 	// Set primitive topology
 	immediateContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-	if(vertices) delete vertices;
-	if(indices) delete indices;
+	
 
 	if(vertexShaders.size() > 0)
 		immediateContext->VSSetShader( vertexShaders[0], NULL, 0 );
@@ -356,6 +361,12 @@ HRESULT DirectXDevice::DrawGameObject(SGE::Framework::GameObject* gameObject){
 HRESULT DirectXDevice::Clear(){
 	float ClearColor[4] = { 0.1f, 0.1f, 0.3f, 1.0f }; //red,green,blue,alpha
     immediateContext->ClearRenderTargetView( renderTargetView, ClearColor );
+	immediateContext->ClearDepthStencilView( depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
+	return S_OK;
+}
+
+HRESULT DirectXDevice::Clear(float clearColor[4]){
+    immediateContext->ClearRenderTargetView( renderTargetView, clearColor );
 	immediateContext->ClearDepthStencilView( depthStencilView, D3D11_CLEAR_DEPTH, 1.0f, 0 );
 	return S_OK;
 }
