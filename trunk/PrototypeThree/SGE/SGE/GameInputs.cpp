@@ -25,6 +25,7 @@ void GameInputs::Update(){
 void GameInputs::HandleInput(MSG msg){
 
 	try{
+		if(msg.message == WM_KEYDOWN || msg.message == WM_CHAR || msg.message == WM_KEYUP)
 		state.at((Keys)msg.wParam);
 	}
 	catch(const std::out_of_range& oor){
@@ -77,4 +78,16 @@ KeyState GameInputs::GetKeyState(Keys key){
 		return NotKey;
 	}
 
+}
+
+SGE::Vector4 GameInputs::GetMousePosition(){
+	Vector4 mousePosition;
+	POINT point;
+
+	GetCursorPos(&point);
+
+	mousePosition.x = point.x;
+	mousePosition.y = point.y;
+
+	return mousePosition;
 }

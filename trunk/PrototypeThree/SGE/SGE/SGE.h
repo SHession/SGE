@@ -108,7 +108,8 @@ namespace SGE {
 			D4 = 0X34, D5 = 0X35, D6 = 0X36, D7 = 0X37,
 			D8 = 0X38, D9 = 0X39,
 			ENTER = 0x0D, BACKSPACE = 0X08, TAB = 0X09, CLEAR = 0X0C,
-			SHIFT = 0X10, ESCAPE = 0x1b
+			SHIFT = 0X10, ESCAPE = 0x1b,
+			LMB = 0x01, RMB = 0x02, MMB = 0x04, 
 		};
 
 		enum KeyState{
@@ -121,8 +122,9 @@ namespace SGE {
 				GameInputs();
 				void HandleInput(MSG msg);
 				void Update();
-
+				__declspec( dllexport ) Vector4 GetMousePosition();
 				__declspec( dllexport ) KeyState GetKeyState(Keys key);
+			private:
 				std::map<Keys,int> state;
 		};
 
