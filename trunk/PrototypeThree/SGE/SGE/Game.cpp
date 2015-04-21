@@ -78,7 +78,11 @@ HRESULT Game::Run(GameDescription *gameDescription,HINSTANCE hInstance, int nCmd
 		gameTime.Update();
 		input.Update();
     }
+	
+	//Clean up the application
 	CleanUp();
+	if(graphics) graphics->CleanUp();
+	if(audio) audio->CleanUp();
 
 	return S_OK;
 }
@@ -163,8 +167,7 @@ void Game::Draw(){
 }
 
 void Game::CleanUp(){
-	if(graphics) graphics->CleanUp();
-	if(audio) audio->CleanUp();
+
 }
 
 void Game::Exit(){

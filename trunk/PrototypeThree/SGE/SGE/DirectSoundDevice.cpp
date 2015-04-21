@@ -17,14 +17,14 @@ HRESULT DirectSoundDevice::InitializeDevice(HWND hWnd){
 	HRESULT result = DirectSoundCreate8(NULL, &lpds,NULL);
 	if(FAILED(result)) return result;
 
-	lpds->SetCooperativeLevel(hWnd, DSSCL_NORMAL);
+	lpds->SetCooperativeLevel(hWnd, DSSCL_PRIORITY);
 	if(FAILED(result)) return result;
 
 	return S_OK;
 }
 
 HRESULT DirectSoundDevice::LoadWav(char* filename, SGE::Sound::Sound *sound){
-	//http://www.rastertek.com/dx11tut14.html
+	//This method is based of an example featured on http://www.rastertek.com/dx11tut14.html
 	struct WaveHeaderType
 	{
 		char chunkId[4];

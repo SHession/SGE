@@ -31,6 +31,11 @@ namespace SGD3D {
 		UINT numOfIndices;
 		UINT startVertex;
 		UINT startIndex;
+
+		void Destroy(){
+			if(indices) delete[] indices;
+			if(vertices) delete[] vertices;
+		}
 	};
 
 	struct CB_VS_PER_OBJECT{
@@ -38,7 +43,7 @@ namespace SGD3D {
 		DirectX::XMMATRIX worldViewProj;
 	};
 
-	void DestroyMesh(Mesh *mesh);
+	
 
 	class DirectXDevice : public SGE::Graphics::GraphicDevice{
 		public:
@@ -53,6 +58,7 @@ namespace SGD3D {
 			 HRESULT DrawGameObject(SGE::Framework::GameObject*);
 			 HRESULT Clear();
 			 HRESULT Clear(float[4]);
+			 HRESULT CleanUp();
 
 			 HRESULT LoadObj(wchar_t * filename, SGE::Graphics::Mesh* mesh);				
 		     HRESULT LoadTexture(wchar_t* filename, SGE::Graphics::Texture* texture);
@@ -93,7 +99,6 @@ namespace SGD3D {
 			DirectX::XMFLOAT4X4 camera;
 			DirectX::XMFLOAT4X4 projection;
 
-			HRESULT CleanUp();
 			HRESULT CompileShader(LPCWSTR srcFile,LPCSTR entryPoint, LPCSTR profile, ID3DBlob** blob );
 			DXGI_FORMAT _WICToDXGI( const GUID& guid );
 			size_t _WICBitsPerPixel( REFGUID targetGuid , IWICImagingFactory *factory);
