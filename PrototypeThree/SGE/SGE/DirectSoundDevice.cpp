@@ -149,7 +149,7 @@ HRESULT DirectSoundDevice::LoadWav(char* filename, SGE::Sound::Sound *sound){
 }
 
 HRESULT DirectSoundDevice::Play(SGE::Sound::Sound *sound){
-	if(sound->index == -1)
+	if(sound->index == -1 || sound->index >= sounds.size())
 		return E_FAIL;
 	sounds[sound->index]->SetCurrentPosition(0);
 	sounds[sound->index]->SetVolume((LONG)sound->volume);
@@ -158,7 +158,7 @@ HRESULT DirectSoundDevice::Play(SGE::Sound::Sound *sound){
 }
 
 HRESULT DirectSoundDevice::Loop(SGE::Sound::Sound *sound){
-	if(sound->index == -1)
+	if(sound->index == -1 || sound->index >= sounds.size())
 		return E_FAIL;
 	sounds[sound->index]->SetCurrentPosition(0);
 	sounds[sound->index]->SetVolume((LONG)sound->volume);
@@ -167,7 +167,7 @@ HRESULT DirectSoundDevice::Loop(SGE::Sound::Sound *sound){
 }
 
 HRESULT DirectSoundDevice::Stop(SGE::Sound::Sound *sound){
-	if(sound->index == -1)
+	if(sound->index == -1 || sound->index >= sounds.size())
 		return E_FAIL;
 	sounds[sound->index]->SetCurrentPosition(0);
 	sounds[sound->index]->SetVolume((LONG)sound->volume);

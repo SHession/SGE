@@ -311,14 +311,14 @@ HRESULT DirectXDevice::DrawMesh(SGE::Graphics::Mesh* mesh, SGE::Graphics::Textur
 	XMMATRIX world = XMMatrixScaling(scale.x, scale.y, scale.z) * XMMatrixRotationRollPitchYaw(rotation.x, rotation.y, rotation.z) * 
 		XMMatrixTranslation(position.x, position.y, position.z);
 
-	if(mesh->index != -1){
+	if(mesh->index != -1 && mesh->index < meshes.size()){
 		CB_VS_PER_OBJECT cb;
 		cb.world = XMMatrixTranspose(world);
 		cb.worldViewProj = XMMatrixTranspose(world * XMLoadFloat4x4(&camera) * XMLoadFloat4x4(&projection));
 		immediateContext->UpdateSubresource(constantBuffer,0,NULL,&cb,0,0);
 		immediateContext->VSSetConstantBuffers( 0, 1, &constantBuffer );
 
-		if(texture && texture->index != -1)
+		if(texture && texture->index != -1 && texture->index < textures.size())
 			immediateContext->PSSetShaderResources( 0, 1, &textures[texture->index] );
 
 		immediateContext->DrawIndexed(meshes[mesh->index]->numOfIndices,meshes[mesh->index]->startIndex,meshes[mesh->index]->startVertex);
@@ -339,14 +339,14 @@ HRESULT DirectXDevice::DrawGameObject(SGE::Framework::GameObject* gameObject){
 		* XMMatrixRotationRollPitchYaw(gameObject->Rotation().x, gameObject->Rotation().y, gameObject->Rotation().z) 
 		* XMMatrixTranslation(gameObject->Position().x, gameObject->Position().y, gameObject->Position().z);
 
-	if(gameObject->Mesh().index != -1){
+	if(gameObject->Mesh().index != -1 && gameObject->Mesh().index < meshes.size()){
 		CB_VS_PER_OBJECT cb;
 		cb.world = XMMatrixTranspose(world);
 		cb.worldViewProj = XMMatrixTranspose(world * XMLoadFloat4x4(&camera) * XMLoadFloat4x4(&projection));
 		immediateContext->UpdateSubresource(constantBuffer,0,NULL,&cb,0,0);
 		immediateContext->VSSetConstantBuffers( 0, 1, &constantBuffer );
 
-		if(gameObject->Texture().index != -1)
+		if(gameObject->Texture().index != -1 && gameObject->Texture().index < textures.size())
 			immediateContext->PSSetShaderResources( 0, 1, &textures[gameObject->Texture().index] );
 
 		immediateContext->DrawIndexed(meshes[gameObject->Mesh().index]->numOfIndices,meshes[gameObject->Mesh().index]->startIndex,meshes[gameObject->Mesh().index]->startVertex);
@@ -897,7 +897,7 @@ HRESULT DirectXDevice::LoadPShader(wchar_t* filename, char* entryPoint, SGE::Gra
 }
 
 HRESULT DirectXDevice::SetVShader(SGE::Graphics::VertexShader *shader){
-	if(shader->index != -1)
+	if(shader->index != -1 && shader->index < vertexShaders.size())
 		immediateContext->VSSetShader( vertexShaders[shader->index], NULL, 0 );
 	else 
 		return E_FAIL;
@@ -907,7 +907,7 @@ HRESULT DirectXDevice::SetVShader(SGE::Graphics::VertexShader *shader){
 }
 
 HRESULT DirectXDevice::SetPShader(SGE::Graphics::PixelShader *shader){
-	if(shader->index != -1)
+	if(shader->index != -1 && shader->index < pixelShaders.size())
 		immediateContext->PSSetShader( pixelShaders[shader->index], NULL, 0 );
 	else 
 		return E_FAIL;
@@ -938,7 +938,7 @@ HRESULT DirectXDevice::CreateConstantBuffer(size_t byteWidth, SGE::Graphics::Con
 
 HRESULT DirectXDevice::UpdateConstantBuffer(SGE::Graphics::CB * data, SGE::Graphics::ConstantBuffer *buffer){
 
-	if(buffer->index == -1)
+	if(buffer->index == -1 || buffer->index >= constantBuffers.size())
 		return E_FAIL;
 
 	immediateContext->UpdateSubresource(constantBuffers[buffer->index],0,NULL,data,0,0);
