@@ -16,12 +16,11 @@ namespace SGDS {
 		     HRESULT Play(SGE::Sound::Sound *sound);
 			 HRESULT Loop(SGE::Sound::Sound *sound);
 			 HRESULT Stop(SGE::Sound::Sound *sound);
+			 HRESULT CleanUp();
 
 		private:
 			LPDIRECTSOUND8 lpds;
 			std::vector<IDirectSoundBuffer8*> sounds;
-
-			HRESULT CleanUp();
 	};
 
 }

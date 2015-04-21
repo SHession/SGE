@@ -976,7 +976,7 @@ HRESULT DirectXDevice::CleanUp(){
 		if(textures[i]) textures[i]->Release();
 	}
 	for(UINT i =0; i < meshes.size(); i++){
-		if(meshes[i]) DestroyMesh(meshes[i]);
+		if(meshes[i]) meshes[i]->Destroy();
 		if(meshes[i]) delete meshes[i];
 	}
 
@@ -1090,9 +1090,3 @@ size_t DirectXDevice::_WICBitsPerPixel( REFGUID targetGuid , IWICImagingFactory 
 
     return bpp;
 }
-
-void SGD3D::DestroyMesh(Mesh* mesh){
-	if(mesh->indices) delete[] mesh->indices;
-	if(mesh->vertices) delete[] mesh->vertices;
-};
-

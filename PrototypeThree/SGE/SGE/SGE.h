@@ -29,22 +29,37 @@ namespace SGE {
 	namespace Graphics {
 		struct VertexShader{
 			int index;
+			VertexShader(){
+				index = -1;
+			}
 		};
 
 		struct PixelShader{
 			int index;
+			PixelShader(){
+				index = -1;
+			}
 		};
 
 		struct ConstantBuffer{
 			int index;
+			ConstantBuffer(){
+				index= -1;
+			}
 		};
 
 		struct Mesh{
 			int index;
+			Mesh () {
+				index = -1;
+			}
 		};
 
 		struct Texture{
 			int index;
+			Texture(){
+				index = -1;
+			}
 		};
 
 		struct CB{};
@@ -81,6 +96,11 @@ namespace SGE {
 		struct Sound{
 			int index;
 			float volume;
+
+			Sound(){
+				index = -1;
+				volume = 0;
+			}
 		};
 
 		class SoundDevice{
@@ -187,8 +207,6 @@ namespace SGE {
 
 				SGE::Graphics::Mesh _mesh;
 				SGE::Graphics::Texture _texture;
-
-			protected:
 
 
 		};
