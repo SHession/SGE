@@ -43,8 +43,6 @@ namespace SGD3D {
 		DirectX::XMMATRIX worldViewProj;
 	};
 
-	
-
 	class DirectXDevice : public SGE::Graphics::GraphicDevice{
 		public:
 			__declspec( dllexport ) DirectXDevice();

@@ -97,7 +97,7 @@ HRESULT Game::InitializeWindow(GameDescription *gameDescription, HINSTANCE hInst
 	wcex.hInstance = hInstance;
 	wcex.hIcon = NULL;
     wcex.hCursor = LoadCursor( NULL, IDC_ARROW );
-	wcex.hbrBackground = ( HBRUSH )( COLOR_WINDOW + 1);
+	wcex.hbrBackground = ( HBRUSH )( COLOR_WINDOW);
     wcex.lpszMenuName = NULL;
     wcex.lpszClassName = L"SGE";
     wcex.hIconSm = NULL;
@@ -114,9 +114,10 @@ HRESULT Game::InitializeWindow(GameDescription *gameDescription, HINSTANCE hInst
 	}
 
 	AdjustWindowRect( &rc, WS_OVERLAPPEDWINDOW, FALSE );
-	mainWnd = CreateWindow( L"SGE", L"SGETTest", WS_OVERLAPPEDWINDOW,
+	mainWnd = CreateWindow( L"SGE", L"SGETest",  WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX ,
                            CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, NULL, NULL, hInstance,
                            NULL );
+
 	if( !mainWnd)
 		return E_FAIL;
 
