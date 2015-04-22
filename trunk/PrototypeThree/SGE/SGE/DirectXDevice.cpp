@@ -350,6 +350,12 @@ HRESULT DirectXDevice::DrawGameObject(SGE::Framework::GameObject* gameObject){
 			immediateContext->PSSetShaderResources( 0, 1, &textures[gameObject->Texture().index] );
 
 		immediateContext->DrawIndexed(meshes[gameObject->Mesh().index]->numOfIndices,meshes[gameObject->Mesh().index]->startIndex,meshes[gameObject->Mesh().index]->startVertex);
+
+		SGE::Vector4 direction = gameObject->InitialDirection();
+		XMVECTOR currentRotation = XMVectorSet(direction.x, direction.y, direction.z, direction.w);
+		currentRotation =	XMVector3TransformCoord(currentRotation, XMMatrixRotationRollPitchYaw(gameObject->Rotation().x, gameObject->Rotation().y, gameObject->Rotation().z) );
+		direction = SGE::Vector4(XMVectorGetX(currentRotation),XMVectorGetY(currentRotation),XMVectorGetZ(currentRotation),XMVectorGetW(currentRotation));
+		gameObject->CurrentDirection(direction);
 	}
 	else 
 		return E_FAIL;

@@ -10,12 +10,9 @@ GameObject::GameObject(){
 
 	GameObject::scale.x = GameObject::scale.y = GameObject::scale.z = GameObject::scale.w = 1;
 
-	GameObject::initialRotation.x = 0;
-	GameObject::initialRotation.y = 0;
-	GameObject::initialRotation.z = 1;
-	GameObject::initialRotation.w = 0;
+	GameObject::initialRotation= SGE::Vector4(0,0,1,0);
 	
-	GameObject::currentRotation.x = GameObject::currentRotation.y = GameObject::currentRotation.z = GameObject::currentRotation.w = 0;
+	GameObject::currentRotation = initialRotation;
 
 	_mesh.index = -1;
 	_texture.index = -1;

@@ -56,7 +56,9 @@ HRESULT DirectSoundDevice::LoadWav(char* filename, SGE::Sound::Sound *sound){
 	unsigned char *bufferPtr = NULL;
 	unsigned long bufferSize = NULL;
 
-	fopen_s(&filePtr, filename, "rb");
+	if(fopen_s(&filePtr, filename, "rb") != 0)
+		return E_FAIL;
+
 	count = fread(&waveFileHeader, sizeof(waveFileHeader), 1, filePtr);
 
 	if(count != 1)
@@ -173,6 +175,14 @@ HRESULT DirectSoundDevice::Stop(SGE::Sound::Sound *sound){
 	sounds[sound->index]->SetVolume((LONG)sound->volume);
 	sounds[sound->index]->Stop();
 	return S_OK;
+}
+
+HRESULT DirectSoundDevice::SetVolume(SGE::Sound::Sound *sound){
+	if(sound->index == -1 || sound->index >= sounds.size())
+		return E_FAIL;
+	sounds[sound->index]->SetVolume((LONG)sound->volume);
+	return S_OK;
+	
 }
 
 HRESULT DirectSoundDevice::CleanUp(){
