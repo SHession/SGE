@@ -144,7 +144,7 @@ HRESULT DirectSoundDevice::LoadWav(char* filename, SGE::Sound::Sound *sound){
  
 	sounds.push_back(soundBuffer);
 
-	sound->volume = DSBVOLUME_MAX;
+	sound->volume = 100;
 	sound->index = sounds.size() - 1;
 
 	return S_OK;
@@ -180,7 +180,7 @@ HRESULT DirectSoundDevice::Stop(SGE::Sound::Sound *sound){
 HRESULT DirectSoundDevice::SetVolume(SGE::Sound::Sound *sound){
 	if(sound->index == -1 || sound->index >= sounds.size())
 		return E_FAIL;
-	sounds[sound->index]->SetVolume((LONG)sound->volume);
+	sounds[sound->index]->SetVolume((LONG)(sound->volume - 100) * 100);
 	return S_OK;
 	
 }
