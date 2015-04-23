@@ -62,8 +62,6 @@ namespace SGE {
 			}
 		};
 
-		struct CB{};
-
 		//Abstract class for a graphics device
 		class GraphicDevice{
 			public:
@@ -87,7 +85,7 @@ namespace SGE {
 				virtual HRESULT SetPShader(PixelShader *shader) = 0;
 
 				virtual HRESULT CreateConstantBuffer(size_t byteWidth , ConstantBuffer *buffer) = 0;
-				virtual HRESULT UpdateConstantBuffer(CB * data, ConstantBuffer *buffer) = 0;
+				virtual HRESULT UpdateConstantBuffer(void * data, ConstantBuffer *buffer) = 0;
 		};
 	}
 
