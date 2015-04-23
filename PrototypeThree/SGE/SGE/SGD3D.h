@@ -67,7 +67,7 @@ namespace SGD3D {
 			 HRESULT SetPShader(SGE::Graphics::PixelShader *shader);
 
 			 HRESULT CreateConstantBuffer(size_t byteWidth, SGE::Graphics::ConstantBuffer *buffer);
-			 HRESULT UpdateConstantBuffer(SGE::Graphics::CB * data, SGE::Graphics::ConstantBuffer *buffer );
+			 HRESULT UpdateConstantBuffer(void* data, SGE::Graphics::ConstantBuffer *buffer );
 
 		private:
 			D3D_DRIVER_TYPE         driverType;

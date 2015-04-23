@@ -942,13 +942,13 @@ HRESULT DirectXDevice::CreateConstantBuffer(size_t byteWidth, SGE::Graphics::Con
 	return S_OK;
 }
 
-HRESULT DirectXDevice::UpdateConstantBuffer(SGE::Graphics::CB * data, SGE::Graphics::ConstantBuffer *buffer){
+HRESULT DirectXDevice::UpdateConstantBuffer(void * data, SGE::Graphics::ConstantBuffer *buffer){
 
 	if(buffer->index == -1 || buffer->index >= constantBuffers.size())
 		return E_FAIL;
 
 	immediateContext->UpdateSubresource(constantBuffers[buffer->index],0,NULL,data,0,0);
-	immediateContext->VSSetConstantBuffers( buffer->index + 1, 1, &constantBuffers[buffer->index] );
+	immediateContext->PSSetConstantBuffers( buffer->index, 1, &constantBuffers[buffer->index] );
 
 	return S_OK;
 }
