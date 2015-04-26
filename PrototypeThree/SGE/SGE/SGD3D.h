@@ -39,7 +39,7 @@ namespace SGD3D {
 	};
 
 	struct CB_VS_PER_OBJECT{
-		DirectX::XMMATRIX world;
+		DirectX::XMMATRIX rotation;
 		DirectX::XMMATRIX worldViewProj;
 	};
 

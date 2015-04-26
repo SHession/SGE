@@ -313,7 +313,7 @@ HRESULT DirectXDevice::DrawMesh(SGE::Graphics::Mesh* mesh, SGE::Graphics::Textur
 
 	if(mesh->index != -1 && mesh->index < meshes.size()){
 		CB_VS_PER_OBJECT cb;
-		cb.world = XMMatrixTranspose(world);
+		cb.rotation = XMMatrixTranspose(world);
 		cb.worldViewProj = XMMatrixTranspose(world * XMLoadFloat4x4(&camera) * XMLoadFloat4x4(&projection));
 		immediateContext->UpdateSubresource(constantBuffer,0,NULL,&cb,0,0);
 		immediateContext->VSSetConstantBuffers( 0, 1, &constantBuffer );
@@ -341,7 +341,7 @@ HRESULT DirectXDevice::DrawGameObject(SGE::Framework::GameObject* gameObject){
 
 	if(gameObject->Mesh().index != -1 && gameObject->Mesh().index < meshes.size()){
 		CB_VS_PER_OBJECT cb;
-		cb.world = XMMatrixTranspose(world);
+		cb.rotation = XMMatrixTranspose(XMMatrixRotationRollPitchYaw(gameObject->Rotation().x, gameObject->Rotation().y, gameObject->Rotation().z));
 		cb.worldViewProj = XMMatrixTranspose(world * XMLoadFloat4x4(&camera) * XMLoadFloat4x4(&projection));
 		immediateContext->UpdateSubresource(constantBuffer,0,NULL,&cb,0,0);
 		immediateContext->VSSetConstantBuffers( 0, 1, &constantBuffer );
@@ -351,6 +351,8 @@ HRESULT DirectXDevice::DrawGameObject(SGE::Framework::GameObject* gameObject){
 
 		immediateContext->DrawIndexed(meshes[gameObject->Mesh().index]->numOfIndices,meshes[gameObject->Mesh().index]->startIndex,meshes[gameObject->Mesh().index]->startVertex);
 
+
+		//Calculate Direction
 		SGE::Vector4 direction = gameObject->InitialDirection();
 		XMVECTOR currentRotation = XMVectorSet(direction.x, direction.y, direction.z, direction.w);
 		currentRotation =	XMVector3TransformCoord(currentRotation, XMMatrixRotationRollPitchYaw(gameObject->Rotation().x, gameObject->Rotation().y, gameObject->Rotation().z) );
